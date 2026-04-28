@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { sqlite } from "@/db";
 import { writeAuditLog } from "@/server/audit/service";
 import type { SessionPayload } from "@/server/auth/session";
+import { applyFieldAccess, getFieldAccessMap } from "@/server/permissions";
 import {
   addMoney,
   addQty,
@@ -242,6 +243,7 @@ export function listMachineModels(session: SessionPayload) {
 
 export function listCustomers(session: SessionPayload, query = "") {
   const params = scope(session);
+  const fieldAccess = getFieldAccessMap(session);
   if (query.trim()) {
     return all(
       `SELECT * FROM customers
@@ -249,15 +251,16 @@ export function listCustomers(session: SessionPayload, query = "") {
          AND rowid IN (SELECT rowid FROM customers_fts WHERE customers_fts MATCH ?)
        ORDER BY updated_at DESC`,
       [...params, `${query.trim()}*`],
-    );
+    ).map((row) => applyFieldAccess(row, fieldAccess, ["credit_limit"]));
   }
   return all(
     `SELECT * FROM customers WHERE tenant_id = ? AND org_id = ? ORDER BY updated_at DESC`,
     params,
-  );
+  ).map((row) => applyFieldAccess(row, fieldAccess, ["credit_limit"]));
 }
 
 export function getCustomerDetail(session: SessionPayload, id: string) {
+  const fieldAccess = getFieldAccessMap(session);
   const customer = get(
     `SELECT * FROM customers WHERE tenant_id = ? AND org_id = ? AND id = ?`,
     [...scope(session), id],
@@ -265,7 +268,7 @@ export function getCustomerDetail(session: SessionPayload, id: string) {
   if (!customer) return null;
 
   return {
-    customer,
+    customer: applyFieldAccess(customer, fieldAccess, ["credit_limit"]),
     machines: all(
       `SELECT cm.*, m.manufacturer, m.model
        FROM customer_machines cm

@@ -78,6 +78,7 @@ export function seedDatabase(sqlite: Database.Database) {
 
   seedPhase1(sqlite);
   seedPhase2(sqlite);
+  seedPhase3(sqlite);
 
   console.log("Seed data is ready. Demo account: admin / demo123456");
 }
@@ -532,6 +533,160 @@ function seedPhase2(sqlite: Database.Database) {
       "6222000000000000",
       "subsidy-form.pdf",
       1,
+    );
+}
+
+function seedPhase3(sqlite: Database.Database) {
+  const childOrgs = [
+    ["org-region-east", orgId, 2, "REGION", "华东大区", "EAST", 10],
+    ["org-store-linyi", "org-region-east", 3, "STORE", "临沂直营店", "LY", 20],
+    ["org-team-service", "org-store-linyi", 4, "TEAM", "售后服务组", "SV", 30],
+  ];
+
+  for (const org of childOrgs) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO organizations
+          (id, tenant_id, parent_id, level, org_type, name, code, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(org[0], tenantId, org[1], org[2], org[3], org[4], org[5], org[6]);
+  }
+
+  const phase3Permissions = [
+    ["perm-system-org-view", "system:org:view", "查看组织树", "允许查看四级组织树"],
+    ["perm-system-role-view", "system:role:view", "查看角色矩阵", "允许查看菜单、按钮、字段和数据权限"],
+    ["perm-workflow-write", "workflow:write", "维护审批流", "允许配置单据审批流程"],
+    ["perm-report-view", "report:view", "查看固定报表", "允许访问经营报表中心"],
+    ["perm-config-write", "config:write", "维护系统配置", "允许维护编号规则、字典和参数"],
+  ];
+
+  for (const permission of phase3Permissions) {
+    sqlite
+      .prepare(
+        "INSERT OR IGNORE INTO permissions (id, code, name, description) VALUES (?, ?, ?, ?)",
+      )
+      .run(...permission);
+    sqlite
+      .prepare("INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)")
+      .run(adminRoleId, permission[0]);
+  }
+
+  const fieldPermissions = [
+    ["cost_price", "VISIBLE"],
+    ["credit_limit", "VISIBLE"],
+    ["customer_id_no", "MASKED"],
+    ["bank_account", "MASKED"],
+  ];
+
+  for (const [fieldCode, accessLevel] of fieldPermissions) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO role_field_permissions
+          (role_id, field_code, access_level)
+          VALUES (?, ?, ?)`,
+      )
+      .run(adminRoleId, fieldCode, accessLevel);
+  }
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO approval_flows
+        (id, tenant_id, org_id, code, name, document_type, condition_json, status, version)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "approval-flow-sales",
+      tenantId,
+      orgId,
+      "FLOW-SALES-OVER-CREDIT",
+      "销售超信用审批",
+      "SALES_ORDER",
+      '{"totalAmountGte":"50000","creditExceeded":true}',
+      "ACTIVE",
+      1,
+    );
+
+  const nodes = [
+    ["approval-node-start", "start", "START", "提交", "", 40, 120, 1],
+    ["approval-node-manager", "manager", "APPROVAL", "销售主管审批", "sales_manager", 260, 120, 2],
+    ["approval-node-finance", "finance", "APPROVAL", "财务复核", "finance", 480, 120, 3],
+    ["approval-node-end", "end", "END", "通过", "", 700, 120, 4],
+  ];
+
+  for (const node of nodes) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO approval_flow_nodes
+          (id, flow_id, node_key, node_type, title, assignee_role_code, x, y, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(node[0], "approval-flow-sales", node[1], node[2], node[3], node[4], node[5], node[6], node[7]);
+  }
+
+  const edges = [
+    ["approval-edge-1", "start", "manager", "超信用额度", 1],
+    ["approval-edge-2", "manager", "finance", "主管通过", 2],
+    ["approval-edge-3", "finance", "end", "财务通过", 3],
+  ];
+
+  for (const edge of edges) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO approval_flow_edges
+          (id, flow_id, source_node_key, target_node_key, condition_label, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(edge[0], "approval-flow-sales", edge[1], edge[2], edge[3], edge[4]);
+  }
+
+  const numberRules = [
+    ["rule-sales-order", "SALES_ORDER", "SO"],
+    ["rule-purchase-order", "PURCHASE_ORDER", "PO"],
+    ["rule-service-order", "SERVICE_ORDER", "SV"],
+    ["rule-warranty-claim", "WARRANTY_CLAIM", "WC"],
+  ];
+
+  for (const [id, documentType, prefix] of numberRules) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO document_number_rules
+          (id, tenant_id, org_id, document_type, prefix, sequence_length, reset_cycle)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(id, tenantId, orgId, documentType, prefix, 4, "DAY");
+  }
+
+  const parameters = [
+    ["param-credit-block", "sales.credit_block_enabled", "true", "BOOLEAN", "销售超信用额度时阻断审核"],
+    ["param-warranty-days", "warranty.default_days", "365", "NUMBER", "默认三包周期天数"],
+    ["param-maintenance-ratio", "maintenance.advance_ratio", "0.9", "NUMBER", "保养预订单提前触发比例"],
+  ];
+
+  for (const parameter of parameters) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO system_parameters
+          (id, tenant_id, org_id, param_key, param_value, value_type, description)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(parameter[0], tenantId, orgId, parameter[1], parameter[2], parameter[3], parameter[4]);
+  }
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO custom_reports
+        (id, tenant_id, org_id, code, name, report_domain, layout_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "custom-report-service-cost",
+      tenantId,
+      orgId,
+      "CR-SERVICE-COST",
+      "售后费用分析",
+      "SERVICE",
+      '{"rows":["engineer"],"columns":["month"],"metrics":["laborAmount","partsAmount"]}',
     );
 }
 

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { sqlite } from "@/db";
 import { writeAuditLog } from "@/server/audit/service";
 import type { SessionPayload } from "@/server/auth/session";
+import { applyFieldAccess, getFieldAccessMap } from "@/server/permissions";
 import { addMoney, multiplyMoney } from "@/server/phase1/decimal";
 import { all, get, nextCode, run, scope } from "@/server/phase1/repository";
 import type {
@@ -708,6 +709,8 @@ export function convertStockingSuggestionToPurchase(session: SessionPayload, id:
 }
 
 export function listSubsidyLedgers(session: SessionPayload) {
+  const fieldAccess = getFieldAccessMap(session);
+
   return all(
     `SELECT sl.*, c.name AS customerName, so.code AS salesOrderCode,
       cm.factory_serial AS factorySerial
@@ -718,7 +721,7 @@ export function listSubsidyLedgers(session: SessionPayload) {
      WHERE sl.tenant_id = ? AND sl.org_id = ?
      ORDER BY sl.created_at DESC`,
     scope(session),
-  );
+  ).map((row) => applyFieldAccess(row, fieldAccess, ["customer_id_no", "bank_account"]));
 }
 
 export function createSubsidyLedger(session: SessionPayload, input: SubsidyLedgerInput) {

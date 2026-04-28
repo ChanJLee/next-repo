@@ -25,6 +25,23 @@ const navigation = [
   { label: "农忙备货", href: "/stocking/suggestions" },
   { label: "应收账款", href: "/finance/receivables" },
   { label: "补贴台账", href: "/finance/subsidies" },
+  { label: "报表中心", href: "/reports" },
+  { label: "销售报表", href: "/analytics/sales" },
+  { label: "库存报表", href: "/analytics/inventory" },
+  { label: "采购报表", href: "/analytics/purchase" },
+  { label: "售后报表", href: "/analytics/service" },
+  { label: "三包报表", href: "/analytics/warranty" },
+  { label: "财务报表", href: "/analytics/finance" },
+  { label: "自定义报表", href: "/analytics/custom" },
+  { label: "组织管理", href: "/system/organizations" },
+  { label: "用户管理", href: "/system/users" },
+  { label: "角色权限", href: "/system/roles" },
+  { label: "权限点", href: "/system/permissions" },
+  { label: "审批流设计器", href: "/system/workflows" },
+  { label: "单据编号规则", href: "/system/number-rules" },
+  { label: "操作日志", href: "/system/audit-logs" },
+  { label: "数据字典", href: "/system/dictionaries" },
+  { label: "参数配置", href: "/system/parameters" },
 ];
 
 export function AppShell({
@@ -36,14 +53,14 @@ export function AppShell({
 }) {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-black dark:text-zinc-50">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 lg:block">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 overflow-y-auto border-r border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 lg:block">
         <div className="flex h-12 items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-xl bg-zinc-950 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-950">
             SB
           </div>
           <div>
             <p className="text-sm font-semibold">农机配件 ERP</p>
-            <p className="text-xs text-zinc-500">Phase 2 行业版</p>
+            <p className="text-xs text-zinc-500">Phase 3 管理版</p>
           </div>
         </div>
         <AppNavigation items={navigation} />
