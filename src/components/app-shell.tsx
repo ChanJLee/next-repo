@@ -17,7 +17,14 @@ const navigation = [
   { label: "出入库流水", href: "/inventory/transactions" },
   { label: "采购订单", href: "/purchase/orders" },
   { label: "销售订单", href: "/sales/orders" },
+  { label: "服务工单", href: "/service/orders" },
+  { label: "派单看板", href: "/service/dispatch" },
+  { label: "保养模板", href: "/maintenance/templates" },
+  { label: "保养预订单", href: "/maintenance/preorders" },
+  { label: "三包索赔", href: "/warranty/claims" },
+  { label: "农忙备货", href: "/stocking/suggestions" },
   { label: "应收账款", href: "/finance/receivables" },
+  { label: "补贴台账", href: "/finance/subsidies" },
 ];
 
 export function AppShell({
@@ -36,7 +43,7 @@ export function AppShell({
           </div>
           <div>
             <p className="text-sm font-semibold">农机配件 ERP</p>
-            <p className="text-xs text-zinc-500">Phase 1 MVP</p>
+            <p className="text-xs text-zinc-500">Phase 2 行业版</p>
           </div>
         </div>
         <AppNavigation items={navigation} />

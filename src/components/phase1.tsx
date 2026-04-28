@@ -52,6 +52,20 @@ export function StatusBadge({ status }: { status: string }) {
     OPEN: "待收款",
     PARTIAL: "部分收款",
     PAID: "已结清",
+    REPORTED: "待派单",
+    DISPATCHED: "已派单",
+    ACCEPTED: "已接单",
+    IN_SERVICE: "服务中",
+    COMPLETED: "已完成",
+    CLOSED: "已关闭",
+    GENERATED: "已生成",
+    CONFIRMED: "已确认",
+    CONVERTED: "已转单",
+    REGION_REVIEW: "区域审核",
+    OEM_REVIEW: "整机厂审核",
+    SETTLED: "已结算",
+    SUBMITTED: "已申报",
+    PAID_SUBSIDY: "已拨付",
   };
 
   return <Badge>{labels[status] ?? status}</Badge>;

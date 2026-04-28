@@ -77,6 +77,7 @@ export function seedDatabase(sqlite: Database.Database) {
   }
 
   seedPhase1(sqlite);
+  seedPhase2(sqlite);
 
   console.log("Seed data is ready. Demo account: admin / demo123456");
 }
@@ -358,6 +359,180 @@ function seedPhase1(sqlite: Database.Database) {
         userId,
       );
   }
+}
+
+function seedPhase2(sqlite: Database.Database) {
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO service_orders
+        (id, tenant_id, org_id, code, customer_id, customer_machine_id, source_channel,
+         status, fault_description, fault_code, urgency, current_hours, current_acres,
+         latitude, longitude, assigned_engineer_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "service-order-demo",
+      tenantId,
+      orgId,
+      "SV-DEMO-001",
+      "customer-zhang",
+      "customer-machine-001",
+      "PHONE",
+      "DISPATCHED",
+      "液压升降无力，疑似主泵压力不足",
+      "HYD-LOW",
+      "HIGH",
+      "386",
+      "0",
+      "36.06",
+      "118.34",
+      "赵工程师",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO service_order_events
+        (id, tenant_id, org_id, service_order_id, event_type, title, description, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "service-event-demo",
+      tenantId,
+      orgId,
+      "service-order-demo",
+      "DISPATCH",
+      "已派单",
+      "派给赵工程师",
+      userId,
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO maintenance_templates
+        (id, tenant_id, org_id, code, machine_model_id, name, threshold_hours,
+         advance_ratio, part_package_json, labor_hours)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "maintenance-template-500h",
+      tenantId,
+      orgId,
+      "MT-500H",
+      "machine-lovol-m904",
+      "500h 小保养",
+      500,
+      "0.9",
+      '[{"part":"机油滤芯","qty":1},{"part":"液压油滤芯","qty":1}]',
+      "2",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO maintenance_preorders
+        (id, tenant_id, org_id, code, maintenance_template_id, customer_id,
+         customer_machine_id, status, trigger_hours, quote_amount, expected_service_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "maintenance-preorder-demo",
+      tenantId,
+      orgId,
+      "MP-DEMO-001",
+      "maintenance-template-500h",
+      "customer-zhang",
+      "customer-machine-001",
+      "GENERATED",
+      "386",
+      "360",
+      "2026-05-10",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO warranty_claims
+        (id, tenant_id, org_id, code, service_order_id, customer_id, customer_machine_id,
+         failed_part_id, failed_serial, fault_description, claim_amount, material_complete,
+         failure_photo, nameplate_photo, repair_order_file, customer_signature_file, purchase_proof_file)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "warranty-claim-demo",
+      tenantId,
+      orgId,
+      "WC-DEMO-001",
+      "service-order-demo",
+      "customer-zhang",
+      "customer-machine-001",
+      "part-pump-main",
+      "HP904-SN-0001",
+      "主泵压力不足，需返厂鉴定",
+      "3280",
+      1,
+      "failure.jpg",
+      "nameplate.jpg",
+      "repair-order.pdf",
+      "signature.png",
+      "purchase-proof.pdf",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO warranty_claim_timeline
+        (id, warranty_claim_id, node, status, description)
+        VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "warranty-timeline-demo",
+      "warranty-claim-demo",
+      "AFTER_SALES_MANAGER",
+      "PENDING",
+      "售后主管待初审",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO stocking_suggestions
+        (id, tenant_id, org_id, part_id, warehouse_id, season, current_qty,
+         safety_stock, season_factor, suggested_qty)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "stocking-suggestion-demo",
+      tenantId,
+      orgId,
+      "part-pump-main",
+      "warehouse-main",
+      "SPRING",
+      "4",
+      2,
+      "1.2",
+      "0",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO subsidy_ledgers
+        (id, tenant_id, org_id, code, customer_id, customer_machine_id, policy_type,
+         subsidy_amount, subsidy_ratio, customer_id_no, machine_serial, bank_account,
+         application_file, material_complete)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "subsidy-ledger-demo",
+      tenantId,
+      orgId,
+      "SUB-DEMO-001",
+      "customer-zhang",
+      "customer-machine-001",
+      "PURCHASE",
+      "12000",
+      "0.3",
+      "370000199001010000",
+      "LV2024M9040001",
+      "6222000000000000",
+      "subsidy-form.pdf",
+      1,
+    );
 }
 
 if (process.env.npm_lifecycle_event === "db:seed") {
