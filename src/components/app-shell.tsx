@@ -56,11 +56,11 @@ export function AppShell({
       <aside className="fixed inset-y-0 left-0 hidden w-64 overflow-y-auto border-r border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 lg:block">
         <div className="flex h-12 items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-xl bg-zinc-950 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-950">
-            SB
+            YW
           </div>
           <div>
             <p className="text-sm font-semibold">农机配件 ERP</p>
-            <p className="text-xs text-zinc-500">Phase 3 管理版</p>
+            <p className="text-xs text-zinc-500">杨威农机</p>
           </div>
         </div>
         <AppNavigation items={navigation} />

@@ -1,14 +1,11 @@
 import {
   Badge,
   Card,
-  Dialog,
-  Drawer,
   EmptyState,
   Select,
   Skeleton,
   Table,
   Tabs,
-  Toast,
 } from "@/components/ui";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { getDashboardMetrics, listSalesOrders } from "@/server/phase1/service";
@@ -76,9 +73,6 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold">经营趋势</h2>
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Phase 1 已接入销售、库存和应收聚合数据。
-              </p>
             </div>
             <Tabs items={["7 天", "30 天", "90 天"]} />
           </div>
@@ -94,14 +88,43 @@ export default async function DashboardPage() {
         </Card>
 
         <div className="space-y-4">
-          <Drawer title="⌘K 命令面板骨架">
-            支持快速跳转配件、客户、采购、销售和应收模块。
-          </Drawer>
-          <Dialog title="基础组件验收">
-            Button / Input / Select / Table / Card / Badge / Dialog / Drawer /
-            已挂载采购入库、库存预占、销售出库和应收核销闭环。
-          </Dialog>
-          <Toast>数据库迁移与演示账号会在 `pnpm dev` 启动前准备完成。</Toast>
+          <Card>
+            <h2 className="font-semibold">今日关注</h2>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  待发货订单
+                </span>
+                <span className="font-medium">{dashboard.pendingShipments} 单</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  应收余额
+                </span>
+                <span className="font-medium">¥ {dashboard.receivableAmount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  库存总值
+                </span>
+                <span className="font-medium">¥ {dashboard.inventoryValue}</span>
+              </div>
+            </div>
+          </Card>
+          <Card>
+            <h2 className="font-semibold">快捷入口</h2>
+            <div className="mt-4 grid gap-2 text-sm">
+              <a className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800" href="/sales/orders">
+                销售订单
+              </a>
+              <a className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800" href="/inventory">
+                库存查询
+              </a>
+              <a className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800" href="/finance/receivables">
+                应收账款
+              </a>
+            </div>
+          </Card>
         </div>
       </section>
 
