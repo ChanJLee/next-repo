@@ -1,7 +1,8 @@
 import { AppNavigation } from "./app-navigation";
+import { AppRouteTitle } from "./app-route-title";
 import { logoutAction } from "@/server/auth/actions";
 import type { SessionPayload } from "@/server/auth/session";
-import { Badge, Breadcrumb, Button } from "./ui";
+import { Badge, Button } from "./ui";
 
 const navigation = [
   { label: "经营驾驶舱", href: "/" },
@@ -43,10 +44,7 @@ export function AppShell({
       <div className="lg:pl-64">
         <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/80 px-6 py-3 backdrop-blur dark:border-zinc-800 dark:bg-black/80">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <Breadcrumb items={["首页", "经营驾驶舱"]} />
-              <h1 className="mt-1 text-lg font-semibold">经营驾驶舱</h1>
-            </div>
+            <AppRouteTitle items={navigation} />
             <div className="flex items-center gap-3">
               <button className="hidden h-9 min-w-56 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-left text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 md:block">
                 ⌘K 搜索命令、单据、客户
