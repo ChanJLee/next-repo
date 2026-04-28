@@ -23,6 +23,7 @@ export function writeAuditLog(input: AuditInput) {
       entity: input.entity,
       entityId: input.entityId,
       detail: JSON.stringify(input.detail ?? {}),
+      createdAt: new Date().toISOString(),
     })
     .run();
 }

@@ -1,4 +1,5 @@
 import { Card, PageHeader, SearchBar, Table } from "@/components/phase1";
+import { formatUtc8DateTime } from "@/lib/date";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { listAuditLogs } from "@/server/phase3/service";
 
@@ -32,7 +33,7 @@ export default async function AuditLogsPage({
           <tbody>
             {rows.map((row) => (
               <tr className="border-t border-zinc-100 dark:border-zinc-900" key={String(row.id)}>
-                <td className="px-4 py-3">{String(row.created_at)}</td>
+                <td className="px-4 py-3">{formatUtc8DateTime(row.created_at)}</td>
                 <td className="px-4 py-3">{String(row.userName ?? "-")}</td>
                 <td className="px-4 py-3">{String(row.action)}</td>
                 <td className="px-4 py-3">
