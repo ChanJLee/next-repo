@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 import { seedDatabase } from "./seed";
 
 const databaseUrl = process.env.DATABASE_URL ?? "./data/app.db";
-const migrations = ["0000_phase0.sql"];
+const migrations = ["0000_phase0.sql", "0001_phase1.sql"];
 
 mkdirSync(dirname(databaseUrl), { recursive: true });
 

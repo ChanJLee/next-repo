@@ -76,7 +76,288 @@ export function seedDatabase(sqlite: Database.Database) {
       .run(randomUUID(), tenantId, type, code, label);
   }
 
+  seedPhase1(sqlite);
+
   console.log("Seed data is ready. Demo account: admin / demo123456");
+}
+
+function seedPhase1(sqlite: Database.Database) {
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO suppliers
+        (id, tenant_id, org_id, code, name, supplier_type, contact_name, phone, payment_term_days)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "supplier-lovol",
+      tenantId,
+      orgId,
+      "SUP-001",
+      "雷沃重工配件中心",
+      "OEM_DIRECT",
+      "李经理",
+      "13800000001",
+      30,
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO warehouses
+        (id, tenant_id, org_id, code, name, type, address, manager_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "warehouse-main",
+      tenantId,
+      orgId,
+      "WH-001",
+      "总部配件仓",
+      "SELF",
+      "演示园区 1 号库",
+      "王库管",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO warehouse_locations
+        (id, tenant_id, org_id, warehouse_id, code, zone, aisle, rack, shelf, bin)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "location-a0101",
+      tenantId,
+      orgId,
+      "warehouse-main",
+      "A-01-01",
+      "A 区",
+      "01",
+      "01",
+      "01",
+      "01",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO machine_models
+        (id, tenant_id, org_id, code, manufacturer, category, series, model, year_from, year_to, engine_model, power_hp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "machine-lovol-m904",
+      tenantId,
+      orgId,
+      "M-LV-M904",
+      "雷沃重工",
+      "TRACTOR",
+      "欧豹",
+      "M904",
+      2020,
+      2026,
+      "玉柴 YCD4J",
+      "90",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO customers
+        (id, tenant_id, org_id, code, name, customer_type, level, contact_name, phone, credit_limit, payment_term_days, city, county, address)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "customer-zhang",
+      tenantId,
+      orgId,
+      "CUS-001",
+      "张家农机合作社",
+      "COOP",
+      "GOLD",
+      "张师傅",
+      "13900000002",
+      "50000",
+      30,
+      "临沂",
+      "兰陵县",
+      "示范镇农机合作社",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO customer_machines
+        (id, tenant_id, org_id, code, customer_id, machine_model_id, factory_serial, engine_serial, purchase_date, whole_warranty_until, key_part_warranty_until, current_hours)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, date(?, '+24 months'), date(?, '+36 months'), ?)`,
+    )
+    .run(
+      "customer-machine-001",
+      tenantId,
+      orgId,
+      "CM-001",
+      "customer-zhang",
+      "machine-lovol-m904",
+      "LV2024M9040001",
+      "YC240001",
+      "2024-03-12",
+      "2024-03-12",
+      "2024-03-12",
+      "386",
+    );
+
+  const parts = [
+    [
+      "part-filter-oil",
+      "P-1001",
+      "机油滤芯",
+      "LOVOL-OF-904",
+      "发动机系/滤清器",
+      "雷沃",
+      "WEAR",
+      "45",
+      "68",
+      20,
+      80,
+      '{"spring":1.5,"summer":1.2,"autumn":1.8}',
+      0,
+      0,
+    ],
+    [
+      "part-pump-main",
+      "P-2001",
+      "液压主泵总成",
+      "LOVOL-HP-904",
+      "液压系/泵阀",
+      "雷沃",
+      "THREE_GUARANTEE",
+      "2200",
+      "3280",
+      2,
+      8,
+      '{"spring":1.2,"summer":1.1,"autumn":1.5}',
+      0,
+      1,
+    ],
+  ];
+
+  for (const part of parts) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO parts
+          (id, tenant_id, org_id, code, name, oem_code, category, brand, warranty_type,
+           ref_purchase_price, ref_sales_price, safety_stock, max_stock, seasonal_factor,
+           has_batch, has_serial, default_warehouse_id, default_supplier_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        part[0],
+        tenantId,
+        orgId,
+        part[1],
+        part[2],
+        part[3],
+        part[4],
+        part[5],
+        part[6],
+        part[7],
+        part[8],
+        part[9],
+        part[10],
+        part[11],
+        part[12],
+        part[13],
+        "warehouse-main",
+        "supplier-lovol",
+      );
+
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO part_machine_fitments
+          (id, tenant_id, org_id, part_id, machine_model_id, year_from, year_to)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        randomUUID(),
+        tenantId,
+        orgId,
+        part[0],
+        "machine-lovol-m904",
+        2020,
+        2026,
+      );
+  }
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO part_substitutes
+        (id, tenant_id, org_id, part_id, substitute_part_id, direction, note)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "substitute-filter-pump-demo",
+      tenantId,
+      orgId,
+      "part-filter-oil",
+      "part-pump-main",
+      "ONE_WAY",
+      "演示替换关系",
+    );
+
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO seasonal_calendar
+        (id, tenant_id, org_id, region_code, season, start_date, end_date, factor_json, note)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      "season-spring-demo",
+      tenantId,
+      orgId,
+      "370000",
+      "SPRING",
+      "2026-03-01",
+      "2026-04-20",
+      '{"发动机系":1.5,"液压系":1.2}',
+      "春耕备货窗口",
+    );
+
+  for (const [partId, qty, cost] of [
+    ["part-filter-oil", "36", "45"],
+    ["part-pump-main", "4", "2200"],
+  ]) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO inventory
+          (id, tenant_id, org_id, part_id, warehouse_id, location_id, qty_on_hand, qty_available, avg_cost, last_transaction_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      )
+      .run(
+        `inventory-${partId}`,
+        tenantId,
+        orgId,
+        partId,
+        "warehouse-main",
+        "location-a0101",
+        qty,
+        qty,
+        cost,
+      );
+
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO stock_transactions
+          (id, tenant_id, org_id, part_id, warehouse_id, location_id, direction, transaction_type, qty, unit_cost, source_type, source_id, created_by)
+          VALUES (?, ?, ?, ?, ?, ?, 'IN', 'OPENING', ?, ?, 'seed', ?, ?)`,
+      )
+      .run(
+        `stock-opening-${partId}`,
+        tenantId,
+        orgId,
+        partId,
+        "warehouse-main",
+        "location-a0101",
+        qty,
+        cost,
+        partId,
+        userId,
+      );
+  }
 }
 
 if (process.env.npm_lifecycle_event === "db:seed") {

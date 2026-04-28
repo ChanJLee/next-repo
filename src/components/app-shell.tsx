@@ -5,13 +5,19 @@ import type { SessionPayload } from "@/server/auth/session";
 import { Badge, Breadcrumb, Button } from "./ui";
 
 const navigation = [
-  "经营驾驶舱",
-  "基础数据",
-  "库存",
-  "采购",
-  "销售",
-  "财务",
-  "系统设置",
+  ["经营驾驶舱", "/"],
+  ["配件主数据", "/master/parts"],
+  ["机型库", "/master/machines"],
+  ["客户档案", "/master/customers"],
+  ["客户机器", "/master/customer-machines"],
+  ["供应商", "/master/suppliers"],
+  ["仓库库位", "/master/warehouses"],
+  ["农时日历", "/master/seasons"],
+  ["库存查询", "/inventory"],
+  ["出入库流水", "/inventory/transactions"],
+  ["采购订单", "/purchase/orders"],
+  ["销售订单", "/sales/orders"],
+  ["应收账款", "/finance/receivables"],
 ];
 
 export function AppShell({
@@ -30,11 +36,11 @@ export function AppShell({
           </div>
           <div>
             <p className="text-sm font-semibold">农机配件 ERP</p>
-            <p className="text-xs text-zinc-500">Phase 0</p>
+            <p className="text-xs text-zinc-500">Phase 1 MVP</p>
           </div>
         </div>
         <nav className="mt-8 space-y-1">
-          {navigation.map((item, index) => (
+          {navigation.map(([item, href], index) => (
             <Link
               className={[
                 "flex h-9 items-center rounded-lg px-3 text-sm transition-colors",
@@ -42,7 +48,7 @@ export function AppShell({
                   ? "bg-zinc-100 font-medium text-zinc-950 dark:bg-zinc-900 dark:text-zinc-50"
                   : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-950 dark:hover:bg-zinc-900 dark:hover:text-zinc-50",
               ].join(" ")}
-              href="/"
+              href={href}
               key={item}
             >
               {item}

@@ -10,15 +10,27 @@ import {
   Tabs,
   Toast,
 } from "@/components/ui";
+import { getCurrentSession } from "@/server/auth/current-session";
+import { getDashboardMetrics, listSalesOrders } from "@/server/phase1/service";
 
-const metrics = [
-  ["今日销售额", "¥ 0", "等待销售单据接入"],
-  ["库存预警", "0", "Phase 1 接入库存余额"],
-  ["待收货订单", "0", "Phase 1 接入采购流程"],
-  ["应收账款", "¥ 0", "Phase 1 接入财务模块"],
-];
+export default async function DashboardPage() {
+  const session = await getCurrentSession();
+  const dashboard = session
+    ? getDashboardMetrics(session)
+    : {
+        salesAmount: "0.00",
+        inventoryValue: "0.00",
+        receivableAmount: "0.00",
+        pendingShipments: 0,
+      };
+  const salesOrders = session ? listSalesOrders(session).slice(0, 5) : [];
+  const metrics = [
+    ["累计销售额", `¥ ${dashboard.salesAmount}`, "来自已出库销售订单"],
+    ["库存总值", `¥ ${dashboard.inventoryValue}`, "按库存余额 × 平均成本聚合"],
+    ["待发货", `${dashboard.pendingShipments}`, "已审核未出库销售订单"],
+    ["应收账款", `¥ ${dashboard.receivableAmount}`, "未结清应收余额"],
+  ];
 
-export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -65,7 +77,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="font-semibold">经营趋势</h2>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                图表组件占位，后续接入销售、库存和应收数据。
+                Phase 1 已接入销售、库存和应收聚合数据。
               </p>
             </div>
             <Tabs items={["7 天", "30 天", "90 天"]} />
@@ -83,11 +95,11 @@ export default function DashboardPage() {
 
         <div className="space-y-4">
           <Drawer title="⌘K 命令面板骨架">
-            支持后续接入全局搜索、快速新建单据和跳转常用模块。
+            支持快速跳转配件、客户、采购、销售和应收模块。
           </Drawer>
           <Dialog title="基础组件验收">
             Button / Input / Select / Table / Card / Badge / Dialog / Drawer /
-            Toast / Tabs / Breadcrumb / EmptyState / Skeleton 已建立。
+            已挂载采购入库、库存预占、销售出库和应收核销闭环。
           </Dialog>
           <Toast>数据库迁移与演示账号会在 `pnpm dev` 启动前准备完成。</Toast>
         </div>
@@ -96,9 +108,9 @@ export default function DashboardPage() {
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="font-semibold">待办单据</h2>
+            <h2 className="font-semibold">最近销售单据</h2>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              空状态用于 Phase 1 模块逐步挂载。
+              进入销售订单详情可审核预占并执行出库。
             </p>
           </div>
           <Skeleton className="h-9 w-24" />
@@ -112,14 +124,24 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td className="p-0" colSpan={3}>
-                <EmptyState
-                  description="完成采购、库存、销售模块后，这里会展示需要处理的业务单据。"
-                  title="暂无待办"
-                />
-              </td>
-            </tr>
+            {salesOrders.length === 0 ? (
+              <tr>
+                <td className="p-0" colSpan={3}>
+                  <EmptyState
+                    description="新建销售订单后，这里会展示最近需要处理的单据。"
+                    title="暂无销售单据"
+                  />
+                </td>
+              </tr>
+            ) : (
+              salesOrders.map((row) => (
+                <tr className="border-t border-zinc-100 dark:border-zinc-900" key={String(row.id)}>
+                  <td className="px-4 py-3">{String(row.code)}</td>
+                  <td className="px-4 py-3">{String(row.status)}</td>
+                  <td className="px-4 py-3">{String(row.customerName)}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </Table>
       </Card>
