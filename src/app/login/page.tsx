@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { Button, Card, Input } from "@/components/ui";
 import { loginAction } from "@/server/auth/actions";
 
@@ -26,9 +24,6 @@ export default async function LoginPage({
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">
             登录工作台
           </h1>
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            演示账号：admin / demo123456
-          </p>
         </div>
         <form action={loginAction} className="mt-6 space-y-4">
           <div className="space-y-2">
@@ -37,7 +32,6 @@ export default async function LoginPage({
             </label>
             <Input
               autoComplete="username"
-              defaultValue="admin"
               id="username"
               name="username"
               required
@@ -49,7 +43,6 @@ export default async function LoginPage({
             </label>
             <Input
               autoComplete="current-password"
-              defaultValue="demo123456"
               id="password"
               name="password"
               required
@@ -59,12 +52,6 @@ export default async function LoginPage({
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           <Button className="w-full">登录</Button>
         </form>
-        <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
-          还没有账号？{" "}
-          <Link className="font-medium text-zinc-950 dark:text-zinc-50" href="/register">
-            注册演示账号
-          </Link>
-        </p>
       </Card>
     </main>
   );

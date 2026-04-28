@@ -1,3 +1,4 @@
+import { AppCommandMenu } from "./app-command-menu";
 import { AppNavigation } from "./app-navigation";
 import { AppRouteTitle } from "./app-route-title";
 import { logoutAction } from "@/server/auth/actions";
@@ -70,9 +71,7 @@ export function AppShell({
           <div className="flex items-center justify-between gap-4">
             <AppRouteTitle items={navigation} />
             <div className="flex items-center gap-3">
-              <button className="hidden h-9 min-w-56 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-left text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 md:block">
-                ⌘K 搜索命令、单据、客户
-              </button>
+              <AppCommandMenu items={navigation} />
               <Badge>{session.name}</Badge>
               <form action={logoutAction}>
                 <Button variant="secondary">退出</Button>
