@@ -36,7 +36,17 @@ async function requireSession() {
   return session;
 }
 
-export async function createPartAction(formData: FormData) {
+/** 新建配件表单校验 / 业务失败时返回，成功则 redirect */
+export type CreatePartFormState = {
+  message: string;
+  fieldErrors: Partial<Record<string, string[]>>;
+  formErrors: string[];
+} | null;
+
+export async function createPartAction(
+  _prevState: CreatePartFormState,
+  formData: FormData,
+): Promise<CreatePartFormState> {
   const session = await requireSession();
   const parsed = partInputSchema.safeParse({
     code: value(formData, "code"),
@@ -52,11 +62,36 @@ export async function createPartAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirect("/master/parts/new?error=invalid");
+    const flat = parsed.error.flatten();
+    return {
+      message: "无法保存配件，请根据下方提示修正后再试。",
+      fieldErrors: flat.fieldErrors,
+      formErrors: flat.formErrors,
+    };
   }
 
-  const id = createPart(session, parsed.data);
-  redirect(`/master/parts/${id}`);
+  try {
+    const id = createPart(session, parsed.data);
+    redirect(`/master/parts/${id}`);
+  } catch (e: unknown) {
+    const code =
+      typeof e === "object" && e !== null && "code" in e
+        ? String((e as { code?: string }).code)
+        : "";
+    const msg = e instanceof Error ? e.message : "保存失败";
+    if (code === "SQLITE_CONSTRAINT_UNIQUE" || msg.includes("UNIQUE constraint")) {
+      return {
+        message: "配件编码已存在，请更换编码后重试。",
+        fieldErrors: { code: ["该编码与已有配件重复"] },
+        formErrors: [],
+      };
+    }
+    return {
+      message: msg,
+      fieldErrors: {},
+      formErrors: [msg],
+    };
+  }
 }
 
 export async function createCustomerAction(formData: FormData) {

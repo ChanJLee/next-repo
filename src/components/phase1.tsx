@@ -108,22 +108,35 @@ export function FormField({
   type = "text",
   defaultValue,
   placeholder,
+  error,
 }: {
   label: string;
   name: string;
   type?: string;
   defaultValue?: string;
   placeholder?: string;
+  /** 校验失败时在控件下方展示 */
+  error?: string;
 }) {
   return (
     <label className="space-y-2 text-sm">
       <span className="font-medium">{label}</span>
       <Input
+        aria-invalid={error ? true : undefined}
+        className={cn(
+          error &&
+            "border-red-500 focus:border-red-500 dark:border-red-600 dark:focus:border-red-500",
+        )}
         defaultValue={defaultValue}
         name={name}
         placeholder={placeholder}
         type={type}
       />
+      {error ? (
+        <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      ) : null}
     </label>
   );
 }
@@ -132,15 +145,31 @@ export function SelectField({
   label,
   name,
   children,
+  error,
 }: {
   label: string;
   name: string;
   children: ReactNode;
+  error?: string;
 }) {
   return (
     <label className="space-y-2 text-sm">
       <span className="font-medium">{label}</span>
-      <Select name={name}>{children}</Select>
+      <Select
+        aria-invalid={error ? true : undefined}
+        className={cn(
+          error &&
+            "border-red-500 focus:border-red-500 dark:border-red-600 dark:focus:border-red-500",
+        )}
+        name={name}
+      >
+        {children}
+      </Select>
+      {error ? (
+        <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      ) : null}
     </label>
   );
 }
