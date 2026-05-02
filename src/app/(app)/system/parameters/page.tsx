@@ -7,6 +7,7 @@ import {
   SelectField,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { Badge } from "@/components/ui";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createParameterAction } from "@/server/phase3/actions";
@@ -24,7 +25,7 @@ export default async function ParametersPage() {
       />
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">新增 / 覆盖参数</h2>
-        <form action={createParameterAction} className="space-y-4">
+        <SafeForm action={createParameterAction} className="space-y-4">
           <FormGrid>
             <FormField label="参数键" name="paramKey" />
             <FormField label="参数值" name="paramValue" />
@@ -37,7 +38,7 @@ export default async function ParametersPage() {
             <FormField label="说明" name="description" />
           </FormGrid>
           <Button>保存参数</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>

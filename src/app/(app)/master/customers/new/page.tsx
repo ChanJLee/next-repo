@@ -6,13 +6,14 @@ import {
   PageHeader,
   SelectField,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { createCustomerAction } from "@/server/phase1/actions";
 
 export default function NewCustomerPage() {
   return (
     <div>
       <PageHeader description="新增客户后可在销售订单中启用信用控制。" title="新建客户" />
-      <form action={createCustomerAction}>
+      <SafeForm action={createCustomerAction}>
         <FormCard>
           <FormGrid>
             <FormField label="客户编码" name="code" placeholder="CUS-002" />
@@ -38,7 +39,7 @@ export default function NewCustomerPage() {
           <FormField label="地址" name="address" />
           <Button>保存客户</Button>
         </FormCard>
-      </form>
+      </SafeForm>
     </div>
   );
 }

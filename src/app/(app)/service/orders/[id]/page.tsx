@@ -12,6 +12,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { listParts } from "@/server/phase1/service";
 import {
@@ -64,7 +65,7 @@ export default async function ServiceOrderDetailPage({
         <Card>
           <h2 className="mb-4 font-semibold">状态操作</h2>
           <div className="space-y-3">
-            <form action={dispatchServiceOrderAction} className="flex gap-2">
+            <SafeForm action={dispatchServiceOrderAction} className="flex gap-2">
               <input name="id" type="hidden" value={id} />
               <input
                 className="h-9 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
@@ -72,23 +73,23 @@ export default async function ServiceOrderDetailPage({
                 placeholder="工程师姓名"
               />
               <Button disabled={String(order.status) !== "REPORTED"} variant="secondary">派单</Button>
-            </form>
+            </SafeForm>
             <div className="flex gap-2">
-              <form action={acceptServiceOrderAction}>
+              <SafeForm action={acceptServiceOrderAction}>
                 <input name="id" type="hidden" value={id} />
                 <Button disabled={String(order.status) !== "DISPATCHED"} variant="secondary">接单</Button>
-              </form>
-              <form action={startServiceOrderAction}>
+              </SafeForm>
+              <SafeForm action={startServiceOrderAction}>
                 <input name="id" type="hidden" value={id} />
                 <Button disabled={String(order.status) !== "ACCEPTED"} variant="secondary">开始服务</Button>
-              </form>
+              </SafeForm>
             </div>
           </div>
         </Card>
 
         <Card>
           <h2 className="mb-4 font-semibold">完成工单</h2>
-          <form action={completeServiceOrderAction} className="space-y-4">
+          <SafeForm action={completeServiceOrderAction} className="space-y-4">
             <input name="id" type="hidden" value={id} />
             <FormGrid>
               <FormField defaultValue={String(order.current_hours)} label="完工工时" name="currentHours" />
@@ -118,7 +119,7 @@ export default async function ServiceOrderDetailPage({
               />
             </label>
             <Button disabled={String(order.status) !== "IN_SERVICE"}>完成并联动</Button>
-          </form>
+          </SafeForm>
         </Card>
       </section>
 

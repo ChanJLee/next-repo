@@ -1,3 +1,4 @@
+import { SafeForm } from "@/components/safe-form";
 import { Button, Card, Input } from "@/components/ui";
 import { loginAction } from "@/server/auth/actions";
 
@@ -25,7 +26,7 @@ export default async function LoginPage({
             登录工作台
           </h1>
         </div>
-        <form action={loginAction} className="mt-6 space-y-4">
+        <SafeForm action={loginAction} className="mt-6 space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="username">
               用户名
@@ -51,7 +52,7 @@ export default async function LoginPage({
           </div>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           <Button className="w-full">登录</Button>
-        </form>
+        </SafeForm>
       </Card>
     </main>
   );

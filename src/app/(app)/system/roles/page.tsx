@@ -7,6 +7,7 @@ import {
   SelectField,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { Badge } from "@/components/ui";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createRoleAction } from "@/server/phase3/actions";
@@ -37,7 +38,7 @@ export default async function RolesPage() {
       />
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">新增角色</h2>
-        <form action={createRoleAction} className="space-y-4">
+        <SafeForm action={createRoleAction} className="space-y-4">
           <FormGrid>
             <FormField label="角色名称" name="name" />
             <FormField label="角色编码" name="code" />
@@ -75,7 +76,7 @@ export default async function RolesPage() {
             </div>
           </div>
           <Button>保存角色</Button>
-        </form>
+        </SafeForm>
       </Card>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_360px]">

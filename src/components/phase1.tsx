@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { SafeForm } from "@/components/safe-form";
 import { Badge, Button, Card, Input, Select, Table, Tabs } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
@@ -34,10 +35,10 @@ export function SearchBar({
   placeholder?: string;
 }) {
   return (
-    <form action={action} className="mb-4 flex gap-2">
+    <SafeForm action={action} className="mb-4 flex gap-2">
       <Input name="q" placeholder={placeholder} />
       <Button variant="secondary">搜索</Button>
-    </form>
+    </SafeForm>
   );
 }
 

@@ -7,6 +7,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createDictionaryAction } from "@/server/phase3/actions";
 import { listDictionaries } from "@/server/phase3/service";
@@ -23,7 +24,7 @@ export default async function DictionariesPage() {
       />
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">新增 / 覆盖字典项</h2>
-        <form action={createDictionaryAction} className="space-y-4">
+        <SafeForm action={createDictionaryAction} className="space-y-4">
           <FormGrid>
             <FormField label="类型" name="type" />
             <FormField label="编码" name="code" />
@@ -31,7 +32,7 @@ export default async function DictionariesPage() {
             <FormField defaultValue="0" label="排序" name="sortOrder" type="number" />
           </FormGrid>
           <Button>保存字典</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>

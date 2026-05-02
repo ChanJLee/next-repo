@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { Button, Card, DetailTabs, PageHeader, StatusBadge, Table } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import {
   approvePurchaseOrderAction,
@@ -27,14 +28,14 @@ export default async function PurchaseOrderDetailPage({
       <PageHeader
         action={
           <div className="flex gap-2">
-            <form action={approvePurchaseOrderAction}>
+            <SafeForm action={approvePurchaseOrderAction}>
               <input name="id" type="hidden" value={id} />
               <Button disabled={String(order.status) !== "DRAFT"} variant="secondary">审核</Button>
-            </form>
-            <form action={receivePurchaseOrderAction}>
+            </SafeForm>
+            <SafeForm action={receivePurchaseOrderAction}>
               <input name="id" type="hidden" value={id} />
               <Button disabled={String(order.status) !== "APPROVED"}>收货入库</Button>
-            </form>
+            </SafeForm>
           </div>
         }
         description="审核后可收货入库，入库会更新库存余额和流水。"

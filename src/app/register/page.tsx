@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SafeForm } from "@/components/safe-form";
 import { Button, Card, Input } from "@/components/ui";
 import { registerAction } from "@/server/auth/actions";
 
@@ -30,7 +31,7 @@ export default async function RegisterPage({
             新账号会加入演示租户，便于继续验证业务流程。
           </p>
         </div>
-        <form action={registerAction} className="mt-6 space-y-4">
+        <SafeForm action={registerAction} className="mt-6 space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="name">
               姓名
@@ -58,7 +59,7 @@ export default async function RegisterPage({
           </div>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           <Button className="w-full">注册并登录</Button>
-        </form>
+        </SafeForm>
         <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
           已有账号？{" "}
           <Link className="font-medium text-zinc-950 dark:text-zinc-50" href="/login">

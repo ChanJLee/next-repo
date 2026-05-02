@@ -8,6 +8,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { listCustomerMachines, listParts } from "@/server/phase1/service";
 import {
@@ -31,7 +32,7 @@ export default async function WarrantyClaimsPage() {
       />
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">新建索赔单</h2>
-        <form action={createWarrantyClaimAction} className="space-y-4">
+        <SafeForm action={createWarrantyClaimAction} className="space-y-4">
           <FormGrid>
             <SelectField label="服务工单" name="serviceOrderId">
               {serviceOrders.map((row) => (
@@ -70,7 +71,7 @@ export default async function WarrantyClaimsPage() {
             />
           </label>
           <Button>保存索赔单</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>
@@ -96,7 +97,7 @@ export default async function WarrantyClaimsPage() {
                 <td className="px-4 py-3">{Number(row.material_complete) ? "完整" : "待补齐"}</td>
                 <td className="px-4 py-3"><StatusBadge status={String(row.status)} /></td>
                 <td className="px-4 py-3">
-                  <form action={advanceWarrantyClaimAction}>
+                  <SafeForm action={advanceWarrantyClaimAction}>
                     <input name="id" type="hidden" value={String(row.id)} />
                     <Button
                       disabled={["SETTLED", "REJECTED"].includes(String(row.status))}
@@ -104,7 +105,7 @@ export default async function WarrantyClaimsPage() {
                     >
                       推进审批
                     </Button>
-                  </form>
+                  </SafeForm>
                 </td>
               </tr>
             ))}

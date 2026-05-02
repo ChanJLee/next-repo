@@ -8,6 +8,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { listCustomerMachines } from "@/server/phase1/service";
 import {
@@ -34,7 +35,7 @@ export default async function MaintenancePreordersPage() {
       />
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">生成预订单</h2>
-        <form action={createMaintenancePreorderAction} className="space-y-4">
+        <SafeForm action={createMaintenancePreorderAction} className="space-y-4">
           <FormGrid>
             <SelectField label="保养模板" name="maintenanceTemplateId">
               {templates.map((row) => (
@@ -55,7 +56,7 @@ export default async function MaintenancePreordersPage() {
           </FormGrid>
           <FormField label="备注" name="note" />
           <Button>生成预订单</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>
@@ -82,14 +83,14 @@ export default async function MaintenancePreordersPage() {
                 <td className="px-4 py-3"><StatusBadge status={String(row.status)} /></td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <form action={confirmMaintenancePreorderAction}>
+                    <SafeForm action={confirmMaintenancePreorderAction}>
                       <input name="id" type="hidden" value={String(row.id)} />
                       <Button disabled={String(row.status) !== "GENERATED"} variant="secondary">客户确认</Button>
-                    </form>
-                    <form action={convertMaintenancePreorderAction}>
+                    </SafeForm>
+                    <SafeForm action={convertMaintenancePreorderAction}>
                       <input name="id" type="hidden" value={String(row.id)} />
                       <Button disabled={String(row.status) !== "CONFIRMED"}>转工单</Button>
-                    </form>
+                    </SafeForm>
                   </div>
                 </td>
               </tr>

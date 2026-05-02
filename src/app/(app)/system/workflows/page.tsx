@@ -8,6 +8,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createApprovalFlowAction } from "@/server/phase3/actions";
 import { getApprovalFlowCanvas, listApprovalFlows } from "@/server/phase3/service";
@@ -27,7 +28,7 @@ export default async function WorkflowsPage() {
       <section className="grid gap-6 xl:grid-cols-[420px_1fr]">
         <Card>
           <h2 className="mb-4 font-semibold">新增审批流</h2>
-          <form action={createApprovalFlowAction} className="space-y-4">
+          <SafeForm action={createApprovalFlowAction} className="space-y-4">
             <FormGrid>
               <FormField label="流程名称" name="name" />
               <FormField label="流程编码" name="code" />
@@ -47,7 +48,7 @@ export default async function WorkflowsPage() {
               />
             </label>
             <Button>生成流程骨架</Button>
-          </form>
+          </SafeForm>
         </Card>
 
         <Card>

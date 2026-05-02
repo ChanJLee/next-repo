@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { Button, Card, DetailTabs, PageHeader, StatusBadge, Table } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { approveSalesOrderAction, shipSalesOrderAction } from "@/server/phase1/actions";
 import { getSalesOrderDetail } from "@/server/phase1/service";
@@ -24,14 +25,14 @@ export default async function SalesOrderDetailPage({
       <PageHeader
         action={
           <div className="flex gap-2">
-            <form action={approveSalesOrderAction}>
+            <SafeForm action={approveSalesOrderAction}>
               <input name="id" type="hidden" value={id} />
               <Button disabled={String(order.status) !== "DRAFT"} variant="secondary">审核并预占</Button>
-            </form>
-            <form action={shipSalesOrderAction}>
+            </SafeForm>
+            <SafeForm action={shipSalesOrderAction}>
               <input name="id" type="hidden" value={id} />
               <Button disabled={String(order.status) !== "APPROVED"}>销售出库</Button>
-            </form>
+            </SafeForm>
           </div>
         }
         description="出库会扣减现存、释放预占，并生成应收账款。"

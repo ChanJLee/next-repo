@@ -6,6 +6,7 @@ import {
   PageHeader,
   SelectField,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createPurchaseOrderAction } from "@/server/phase1/actions";
 import { listParts, listSuppliers, listWarehouses } from "@/server/phase1/service";
@@ -19,7 +20,7 @@ export default async function NewPurchaseOrderPage() {
   return (
     <div>
       <PageHeader description="最小采购单支持单行明细，收货后自动入库。" title="新建采购订单" />
-      <form action={createPurchaseOrderAction}>
+      <SafeForm action={createPurchaseOrderAction}>
         <FormCard>
           <FormGrid>
             <SelectField label="供应商" name="supplierId">
@@ -43,7 +44,7 @@ export default async function NewPurchaseOrderPage() {
           <FormField label="备注" name="note" />
           <Button>保存采购订单</Button>
         </FormCard>
-      </form>
+      </SafeForm>
     </div>
   );
 }

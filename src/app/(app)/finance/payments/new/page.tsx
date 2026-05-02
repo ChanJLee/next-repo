@@ -6,6 +6,7 @@ import {
   PageHeader,
   SelectField,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createPaymentAction } from "@/server/phase1/actions";
 import { listCustomers } from "@/server/phase1/service";
@@ -17,7 +18,7 @@ export default async function NewPaymentPage() {
   return (
     <div>
       <PageHeader description="收款默认按客户应收 FIFO 核销。" title="登记收款" />
-      <form action={createPaymentAction}>
+      <SafeForm action={createPaymentAction}>
         <FormCard>
           <FormGrid>
             <SelectField label="客户" name="customerId">
@@ -36,7 +37,7 @@ export default async function NewPaymentPage() {
           <FormField label="备注" name="note" />
           <Button>保存并核销</Button>
         </FormCard>
-      </form>
+      </SafeForm>
     </div>
   );
 }

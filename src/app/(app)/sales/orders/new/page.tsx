@@ -6,6 +6,7 @@ import {
   PageHeader,
   SelectField,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createSalesOrderAction } from "@/server/phase1/actions";
 import {
@@ -28,7 +29,7 @@ export default async function NewSalesOrderPage() {
         description="三包件必须选择客户机器并登记序列号；审核时执行信用和库存校验。"
         title="新建销售订单"
       />
-      <form action={createSalesOrderAction}>
+      <SafeForm action={createSalesOrderAction}>
         <FormCard>
           <FormGrid>
             <SelectField label="客户" name="customerId">
@@ -61,7 +62,7 @@ export default async function NewSalesOrderPage() {
           <FormField label="备注" name="note" />
           <Button>保存销售订单</Button>
         </FormCard>
-      </form>
+      </SafeForm>
     </div>
   );
 }

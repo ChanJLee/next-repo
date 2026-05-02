@@ -6,6 +6,7 @@ import {
   Select,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createStockCountAction } from "@/server/phase1/actions";
 import { listInventory, listWarehouses } from "@/server/phase1/service";
@@ -32,7 +33,7 @@ export default async function InventoryPage() {
         title="库存查询"
       />
       <Card className="mb-4">
-        <form action={createStockCountAction} className="flex items-center gap-3">
+        <SafeForm action={createStockCountAction} className="flex items-center gap-3">
           <Select className="max-w-64" name="warehouseId">
             {warehouses.map((row) => (
               <option key={String(row.id)} value={String(row.id)}>
@@ -41,7 +42,7 @@ export default async function InventoryPage() {
             ))}
           </Select>
           <Button variant="secondary">创建盘点单</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>

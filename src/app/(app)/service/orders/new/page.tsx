@@ -6,6 +6,7 @@ import {
   PageHeader,
   SelectField,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { listCustomerMachines, listCustomers } from "@/server/phase1/service";
 import { createServiceOrderAction } from "@/server/phase2/actions";
@@ -21,7 +22,7 @@ export default async function NewServiceOrderPage() {
         description="录入报修渠道、故障、工时和静态坐标，后续在派单看板派给工程师。"
         title="报修录入"
       />
-      <form action={createServiceOrderAction}>
+      <SafeForm action={createServiceOrderAction}>
         <FormCard>
           <FormGrid>
             <SelectField label="客户" name="customerId">
@@ -66,7 +67,7 @@ export default async function NewServiceOrderPage() {
           </label>
           <Button>保存工单</Button>
         </FormCard>
-      </form>
+      </SafeForm>
     </div>
   );
 }

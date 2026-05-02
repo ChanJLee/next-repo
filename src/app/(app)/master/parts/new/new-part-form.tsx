@@ -9,6 +9,7 @@ import {
   FormGrid,
   SelectField,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import {
   createPartAction,
   type CreatePartFormState,
@@ -50,7 +51,7 @@ export function NewPartForm() {
 
   return (
     <>
-      <form action={formAction}>
+      <SafeForm action={formAction}>
         <FormCard>
           <FormGrid>
             <FormField
@@ -111,7 +112,7 @@ export function NewPartForm() {
             {pending ? "保存中…" : "保存配件"}
           </Button>
         </FormCard>
-      </form>
+      </SafeForm>
 
       <dialog
         className="fixed left-[50vw] top-[50vh] z-50 w-[calc(100%-2rem)] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950 [&::backdrop]:bg-zinc-950/50"

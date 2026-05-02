@@ -8,6 +8,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { listMachineModels } from "@/server/phase1/service";
 import { createMaintenanceTemplateAction } from "@/server/phase2/actions";
@@ -27,7 +28,7 @@ export default async function MaintenanceTemplatesPage() {
       <section className="mb-6 grid gap-6 xl:grid-cols-[420px_1fr]">
         <Card>
           <h2 className="mb-4 font-semibold">新建模板</h2>
-          <form action={createMaintenanceTemplateAction} className="space-y-4">
+          <SafeForm action={createMaintenanceTemplateAction} className="space-y-4">
             <SelectField label="机型" name="machineModelId">
               {machines.map((row) => (
                 <option key={String(row.id)} value={String(row.id)}>
@@ -47,7 +48,7 @@ export default async function MaintenanceTemplatesPage() {
               name="partPackageJson"
             />
             <Button>保存模板</Button>
-          </form>
+          </SafeForm>
         </Card>
         <Card>
           <Table>

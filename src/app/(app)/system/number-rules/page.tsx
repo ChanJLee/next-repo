@@ -7,6 +7,7 @@ import {
   SelectField,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { Badge } from "@/components/ui";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createNumberRuleAction } from "@/server/phase3/actions";
@@ -24,7 +25,7 @@ export default async function NumberRulesPage() {
       />
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">新增 / 覆盖规则</h2>
-        <form action={createNumberRuleAction} className="space-y-4">
+        <SafeForm action={createNumberRuleAction} className="space-y-4">
           <FormGrid>
             <SelectField label="单据类型" name="documentType">
               <option value="SALES_ORDER">销售订单</option>
@@ -48,7 +49,7 @@ export default async function NumberRulesPage() {
             </SelectField>
           </FormGrid>
           <Button>保存规则</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>

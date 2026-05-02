@@ -6,6 +6,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import {
   convertStockingSuggestionAction,
@@ -24,14 +25,14 @@ export default async function StockingSuggestionsPage() {
         title="农忙备货建议"
       />
       <Card className="mb-6">
-        <form action={regenerateStockingSuggestionsAction} className="flex items-center gap-3">
+        <SafeForm action={regenerateStockingSuggestionsAction} className="flex items-center gap-3">
           <Select className="max-w-48" name="season">
             <option value="SPRING">春耕</option>
             <option value="SUMMER">夏管</option>
             <option value="AUTUMN">秋收</option>
           </Select>
           <Button>重新计算建议</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>
@@ -59,7 +60,7 @@ export default async function StockingSuggestionsPage() {
                   {String(row.purchaseOrderCode || "") ? (
                     <span className="text-sm text-zinc-500">{String(row.purchaseOrderCode)}</span>
                   ) : (
-                    <form action={convertStockingSuggestionAction}>
+                    <SafeForm action={convertStockingSuggestionAction}>
                       <input name="id" type="hidden" value={String(row.id)} />
                       <Button
                         disabled={String(row.status) !== "OPEN" || Number(row.suggested_qty) <= 0}
@@ -67,7 +68,7 @@ export default async function StockingSuggestionsPage() {
                       >
                         转采购单
                       </Button>
-                    </form>
+                    </SafeForm>
                   )}
                 </td>
               </tr>

@@ -3,6 +3,8 @@ import { AppNavigation } from "./app-navigation";
 import { AppRouteTitle } from "./app-route-title";
 import { logoutAction } from "@/server/auth/actions";
 import type { SessionPayload } from "@/server/auth/session";
+import { SafeForm } from "@/components/safe-form";
+
 import { Badge, Button } from "./ui";
 
 const navigation = [
@@ -73,9 +75,9 @@ export function AppShell({
             <div className="flex items-center gap-3">
               <AppCommandMenu items={navigation} />
               <Badge>{session.name}</Badge>
-              <form action={logoutAction}>
+              <SafeForm action={logoutAction}>
                 <Button variant="secondary">退出</Button>
-              </form>
+              </SafeForm>
             </div>
           </div>
         </header>

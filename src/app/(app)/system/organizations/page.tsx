@@ -8,6 +8,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createOrganizationAction } from "@/server/phase3/actions";
 import { listOrganizations } from "@/server/phase3/service";
@@ -32,7 +33,7 @@ export default async function OrganizationsPage() {
       />
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">新增组织</h2>
-        <form action={createOrganizationAction} className="space-y-4">
+        <SafeForm action={createOrganizationAction} className="space-y-4">
           <FormGrid>
             <SelectField label="上级组织" name="parentId">
               <option value="">作为一级组织</option>
@@ -54,7 +55,7 @@ export default async function OrganizationsPage() {
             <FormField label="组织编码" name="code" />
           </FormGrid>
           <Button>保存组织</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>

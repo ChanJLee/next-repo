@@ -8,6 +8,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { Badge } from "@/components/ui";
 import { getCurrentSession } from "@/server/auth/current-session";
 import { createUserAction } from "@/server/phase3/actions";
@@ -28,7 +29,7 @@ export default async function UsersPage() {
 
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">新增用户</h2>
-        <form action={createUserAction} className="space-y-4">
+        <SafeForm action={createUserAction} className="space-y-4">
           <FormGrid>
             <FormField label="登录名" name="username" />
             <FormField label="姓名" name="name" />
@@ -62,7 +63,7 @@ export default async function UsersPage() {
             </div>
           </div>
           <Button>保存用户</Button>
-        </form>
+        </SafeForm>
       </Card>
 
       <Card>

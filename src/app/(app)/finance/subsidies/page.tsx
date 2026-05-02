@@ -8,6 +8,7 @@ import {
   StatusBadge,
   Table,
 } from "@/components/phase1";
+import { SafeForm } from "@/components/safe-form";
 import { getCurrentSession } from "@/server/auth/current-session";
 import {
   listCustomerMachines,
@@ -35,7 +36,7 @@ export default async function SubsidyLedgersPage() {
       />
       <Card className="mb-6">
         <h2 className="mb-4 font-semibold">新增台账</h2>
-        <form action={createSubsidyLedgerAction} className="space-y-4">
+        <SafeForm action={createSubsidyLedgerAction} className="space-y-4">
           <FormGrid>
             <SelectField label="关联销售单" name="salesOrderId">
               <option value="">不关联销售单</option>
@@ -72,7 +73,7 @@ export default async function SubsidyLedgersPage() {
           </FormGrid>
           <FormField label="备注" name="note" />
           <Button>保存台账</Button>
-        </form>
+        </SafeForm>
       </Card>
       <Card>
         <Table>
@@ -98,10 +99,10 @@ export default async function SubsidyLedgersPage() {
                 <td className="px-4 py-3">{Number(row.material_complete) ? "完整" : "待补齐"}</td>
                 <td className="px-4 py-3"><StatusBadge status={String(row.status)} /></td>
                 <td className="px-4 py-3">
-                  <form action={advanceSubsidyLedgerAction}>
+                  <SafeForm action={advanceSubsidyLedgerAction}>
                     <input name="id" type="hidden" value={String(row.id)} />
                     <Button disabled={String(row.status) === "PAID_SUBSIDY"} variant="secondary">推进申报</Button>
-                  </form>
+                  </SafeForm>
                 </td>
               </tr>
             ))}
