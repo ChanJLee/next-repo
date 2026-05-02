@@ -2,6 +2,12 @@ import { z } from "zod";
 
 const requiredText = z.string().trim().min(1, "必填");
 const moneyText = z.string().trim().regex(/^\d+(\.\d{1,2})?$/, "请输入金额");
+/** 允许留空，入库按 0 处理（用于配件参考价等不必预填的场景） */
+const optionalPartMoneyText = z
+  .string()
+  .trim()
+  .refine((s) => s === "" || /^\d+(\.\d{1,2})?$/.test(s), "请输入金额")
+  .transform((s) => (s === "" ? "0" : s));
 const qtyText = z.string().trim().regex(/^\d+(\.\d{1,3})?$/, "请输入数量");
 
 export const partInputSchema = z.object({
@@ -13,8 +19,8 @@ export const partInputSchema = z.object({
   warrantyType: z
     .enum(["THREE_GUARANTEE", "WEAR", "NORMAL"])
     .default("NORMAL"),
-  refPurchasePrice: moneyText.default("0"),
-  refSalesPrice: moneyText.default("0"),
+  refPurchasePrice: optionalPartMoneyText,
+  refSalesPrice: optionalPartMoneyText,
   safetyStock: z.coerce.number().int().min(0).default(0),
   hasSerial: z.coerce.number().int().min(0).max(1).default(0),
 });

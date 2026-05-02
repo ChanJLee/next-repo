@@ -8,6 +8,8 @@ import {
 } from "@/components/phase1";
 import { createPartAction } from "@/server/phase1/actions";
 
+import { PartRefPriceFields } from "./part-ref-price-fields";
+
 export default function NewPartPage() {
   return (
     <div>
@@ -28,8 +30,7 @@ export default function NewPartPage() {
               <option value="WEAR">易损件</option>
               <option value="THREE_GUARANTEE">三包件</option>
             </SelectField>
-            <FormField defaultValue="0" label="采购参考价" name="refPurchasePrice" />
-            <FormField defaultValue="0" label="销售指导价" name="refSalesPrice" />
+            <PartRefPriceFields />
             <FormField defaultValue="0" label="安全库存" name="safetyStock" type="number" />
           </FormGrid>
           <label className="flex items-center gap-2 text-sm">
