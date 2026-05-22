@@ -19,6 +19,14 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const { params, ...rest } = parsed.data;
+  const duplicate = await prisma.strategy.findFirst({
+    where: { symbolId: rest.symbolId, name: rest.name },
+    select: { id: true },
+  });
+  if (duplicate) {
+    return NextResponse.json({ error: `策略 "${rest.name}" 已存在` }, { status: 409 });
+  }
+
   const created = await prisma.strategy.create({
     data: { ...rest, params: JSON.stringify(params) },
   });

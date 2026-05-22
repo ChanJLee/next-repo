@@ -1,0 +1,111 @@
+[
+  {
+    "name": "MA200 趋势",
+    "kind": "ma_trend",
+    "params": { "period": 200, "tolerance": 0.5, "maType": "sma" },
+    "cooldownSec": 14400,
+    "description": "价格站在 MA200 上方=多，下方=空。最经典的趋势 regime filter。"
+  },
+  {
+    "name": "MACD",
+    "kind": "macd",
+    "params": { "fast": 12, "slow": 26, "signal": 9, "histTolerance": 0 },
+    "cooldownSec": 7200,
+    "description": "MACD 柱状图正负判趋势方向，动量趋势经典指标。"
+  },
+  {
+    "name": "12月动量",
+    "kind": "roc_momentum",
+    "params": { "period": 252, "longAbove": 15, "shortBelow": -10 },
+    "cooldownSec": 14400,
+    "description": "12 个月涨幅超 +15%=多，跌幅超 -10%=空。Antonacci 双动量基础。"
+  },
+  {
+    "name": "52周通道突破",
+    "kind": "donchian",
+    "params": { "period": 252 },
+    "cooldownSec": 7200,
+    "description": "突破 52 周新高=多，跌破 52 周新低=空。海龟交易经典。"
+  },
+  {
+    "name": "RSI 超买超卖",
+    "kind": "rsi_extreme",
+    "params": { "period": 14, "longBelow": 30, "shortAbove": 70 },
+    "cooldownSec": 7200,
+    "description": "RSI < 30 = 多（超卖反弹），> 70 = 空（超买回落）。"
+  },
+  {
+    "name": "布林带均值回归",
+    "kind": "bb_reversion",
+    "params": { "period": 20, "stdDev": 2 },
+    "cooldownSec": 7200,
+    "description": "跌破下轨=多，冲破上轨=空。震荡市表现较好。"
+  },
+  {
+    "name": "经典蜡烛图反转",
+    "kind": "candle_pattern",
+    "params": { "holdBars": 5, "trendPeriod": 20 },
+    "cooldownSec": 7200,
+    "description": "锤子/吞没/晨星 → 多；射击之星/暮星 → 空。趋势过滤防止逆势抓刀。"
+  },
+  {
+    "name": "卖出高潮（稳健）",
+    "kind": "selling_climax",
+    "params": {
+      "lookback": 10,
+      "volumeMultiple": 1.8,
+      "tailRatio": 0.01,
+      "drawdownPct": -5,
+      "holdBars": 10,
+      "trendPeriod": 20,
+      "requireConfirmation": true
+    },
+    "cooldownSec": 7200,
+    "description": "下跌趋势中放量长下影+累计跌幅+次日确认。VSA/Wyckoff 经典见底。"
+  },
+  {
+    "name": "卖出高潮（激进）",
+    "kind": "selling_climax",
+    "params": {
+      "lookback": 10,
+      "volumeMultiple": 1.8,
+      "tailRatio": 0.01,
+      "drawdownPct": -5,
+      "holdBars": 10,
+      "trendPeriod": 20,
+      "requireConfirmation": false
+    },
+    "cooldownSec": 7200,
+    "description": "同稳健版的阈值，climax 当日即触发（早 1 天进场，假信号更多）。"
+  },
+  {
+    "name": "买入高潮（稳健）",
+    "kind": "buying_climax",
+    "params": {
+      "lookback": 10,
+      "volumeMultiple": 1.8,
+      "tailRatio": 0.01,
+      "gainPct": 5,
+      "holdBars": 10,
+      "trendPeriod": 20,
+      "requireConfirmation": true
+    },
+    "cooldownSec": 7200,
+    "description": "顶部派发告警，发 short。long-only 回测无交易，纯推送提醒。"
+  },
+  {
+    "name": "买入高潮（激进）",
+    "kind": "buying_climax",
+    "params": {
+      "lookback": 10,
+      "volumeMultiple": 1.8,
+      "tailRatio": 0.01,
+      "gainPct": 5,
+      "holdBars": 10,
+      "trendPeriod": 20,
+      "requireConfirmation": false
+    },
+    "cooldownSec": 7200,
+    "description": "见顶当日即告警，比稳健版早 1 天。"
+  }
+]

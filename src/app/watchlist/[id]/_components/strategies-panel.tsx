@@ -8,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LevelBadge } from "@/components/level-badge";
-import { Plus, Trash2, Activity, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Activity, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { BacktestInline } from "./backtest-inline";
+import { STRATEGY_PRESETS, type StrategyPreset } from "@/lib/strategies/presets";
 
 interface BacktestSummary {
   winRate: number;
@@ -86,14 +87,121 @@ const KINDS: KindSpec[] = [
     needs: ["period", "stdDev"],
     defaults: { period: "20", stdDev: "2" },
   },
+  {
+    value: "candle_pattern",
+    label: "经典蜡烛图反转",
+    description: "锤子/看涨吞没/晨星 = 多；射击之星/看跌吞没/暮星 = 空。触发后持有 holdBars 根 K 线。趋势过滤防止逆势抓刀。",
+    needs: ["holdBars", "trendPeriod"],
+    defaults: { holdBars: "5", trendPeriod: "20" },
+  },
+  {
+    value: "selling_climax",
+    label: "卖出高潮（见底）",
+    description: "下跌趋势中放量长下影 + 累计跌幅 = 抛压释放，机构低位接盘。Wyckoff/VSA 经典见底信号，仅发 long。",
+    needs: ["lookback", "volumeMultiple", "tailRatio", "drawdownPct", "holdBars", "trendPeriod", "requireConfirmation"],
+    defaults: { lookback: "10", volumeMultiple: "1.8", tailRatio: "0.01", drawdownPct: "-5", holdBars: "10", trendPeriod: "20", requireConfirmation: "1" },
+  },
+  {
+    value: "buying_climax",
+    label: "买入高潮（见顶）",
+    description: "上涨趋势中放量长上影 + 累计涨幅 = 顶部派发。仅发 short（long-only 回测无交易，作为减仓告警）。",
+    needs: ["lookback", "volumeMultiple", "tailRatio", "gainPct", "holdBars", "trendPeriod", "requireConfirmation"],
+    defaults: { lookback: "10", volumeMultiple: "1.8", tailRatio: "0.01", gainPct: "5", holdBars: "10", trendPeriod: "20", requireConfirmation: "1" },
+  },
 ];
 
 export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: number; ticker: string; initial: StrategyVM[] }) {
   const router = useRouter();
   const [strategies, setStrategies] = useState(initial);
   const [adding, setAdding] = useState(false);
+  const [showPresets, setShowPresets] = useState(false);
+  const [busyPresetName, setBusyPresetName] = useState<string | null>(null);
+  const [bulkAdding, setBulkAdding] = useState(false);
   const [expandedBacktest, setExpandedBacktest] = useState<number | null>(null);
   const [summaries, setSummaries] = useState<Record<number, BacktestSummary | "loading" | "failed">>({});
+
+  const existingNames = useMemo(() => new Set(strategies.map((s) => s.name)), [strategies]);
+  const missingPresetCount = STRATEGY_PRESETS.filter((p) => !existingNames.has(p.name)).length;
+
+  // 服务端返回的 Strategy 行 → StrategyVM
+  function toVM(created: Record<string, unknown>): StrategyVM {
+    return {
+      id: Number(created.id),
+      name: String(created.name),
+      kind: String(created.kind),
+      params: typeof created.params === "string" ? created.params : JSON.stringify(created.params ?? {}),
+      currentLevel: String(created.currentLevel ?? "neutral"),
+      enabled: Boolean(created.enabled ?? true),
+      cooldownSec: Number(created.cooldownSec),
+      lastEvalAt: (created.lastEvalAt as string | null) ?? null,
+    };
+  }
+
+  async function addPreset(preset: StrategyPreset) {
+    if (existingNames.has(preset.name) || busyPresetName === preset.name) return;
+    setBusyPresetName(preset.name);
+    try {
+      const res = await fetch("/api/strategies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbolId,
+          name: preset.name,
+          kind: preset.kind,
+          params: preset.params,
+          cooldownSec: preset.cooldownSec,
+          enabled: true,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        toast.error(typeof j.error === "string" ? j.error : `${preset.name} 添加失败`);
+        return;
+      }
+      const created = await res.json();
+      setStrategies((prev) => [toVM(created), ...prev]);
+      toast.success(`${preset.name} 已添加`);
+      router.refresh();
+    } finally {
+      setBusyPresetName(null);
+    }
+  }
+
+  async function addAllPresets() {
+    const missing = STRATEGY_PRESETS.filter((p) => !existingNames.has(p.name));
+    if (missing.length === 0) return;
+    setBulkAdding(true);
+    try {
+      const results = await Promise.allSettled(
+        missing.map(async (p) => {
+          const r = await fetch("/api/strategies", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              symbolId,
+              name: p.name,
+              kind: p.kind,
+              params: p.params,
+              cooldownSec: p.cooldownSec,
+              enabled: true,
+            }),
+          });
+          if (!r.ok) throw new Error(p.name);
+          return r.json();
+        }),
+      );
+      const createdVMs = results
+        .filter((r): r is PromiseFulfilledResult<Record<string, unknown>> => r.status === "fulfilled")
+        .map((r) => toVM(r.value));
+      setStrategies((prev) => [...createdVMs, ...prev]);
+      const failed = results.length - createdVMs.length;
+      if (failed === 0) toast.success(`已添加 ${createdVMs.length} 条预设策略`);
+      else toast.warning(`${createdVMs.length} 条成功，${failed} 条失败`);
+      router.refresh();
+    } finally {
+      setBulkAdding(false);
+    }
+  }
 
   function refresh() {
     router.refresh();
@@ -162,13 +270,58 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
             <CardTitle className="text-base">策略</CardTitle>
             <CardDescription>每条策略给出 多 / 中 / 空 三种判断，转向多或空时推送飞书</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setAdding(!adding)}>
-            <Plus className="h-4 w-4" /> 添加策略
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowPresets(!showPresets)}>
+              <Sparkles className="h-4 w-4" /> 从预设添加 {missingPresetCount > 0 ? `(${missingPresetCount})` : null}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAdding(!adding)}>
+              <Plus className="h-4 w-4" /> 自定义
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {adding ? <AddStrategyForm symbolId={symbolId} onAdded={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} /> : null}
+        {showPresets ? (
+          <div className="rounded-md border p-3 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="text-sm font-medium">预设策略</div>
+                <p className="text-xs text-muted-foreground">内置 {STRATEGY_PRESETS.length} 条已调好参数的策略，可直接添加</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" size="sm" disabled={missingPresetCount === 0 || bulkAdding} onClick={addAllPresets}>
+                  {bulkAdding ? "添加中…" : missingPresetCount === 0 ? "全部已添加" : `一键添加全部 (${missingPresetCount})`}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowPresets(false)}>关闭</Button>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {STRATEGY_PRESETS.map((p) => {
+                const added = existingNames.has(p.name);
+                return (
+                  <div key={p.name} className="flex items-start justify-between gap-3 rounded border px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{p.name}</span>
+                        <span className="text-xs text-muted-foreground">· {p.kind}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
+                    </div>
+                    {added ? (
+                      <span className="text-xs text-muted-foreground shrink-0 mt-1">已添加</span>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled={busyPresetName === p.name || bulkAdding} onClick={() => addPreset(p)}>
+                        {busyPresetName === p.name ? "…" : "+ 添加"}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {adding ? <AddStrategyForm symbolId={symbolId} onAdded={(created) => { setAdding(false); setStrategies((prev) => [toVM(created), ...prev]); router.refresh(); }} onCancel={() => setAdding(false)} /> : null}
 
         {strategies.length === 0 ? (
           <p className="text-sm text-muted-foreground">还没有策略。点【添加策略】开始。</p>
@@ -243,7 +396,7 @@ function BacktestSummaryBadge({ summary }: { summary: BacktestSummary | "loading
   );
 }
 
-function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; onAdded: () => void; onCancel: () => void }) {
+function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; onAdded: (created: Record<string, unknown>) => void; onCancel: () => void }) {
   const [kind, setKind] = useState<string>("ma_trend");
   const [name, setName] = useState("");
   const [period, setPeriod] = useState("200");
@@ -258,6 +411,14 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
   const [signal, setSignal] = useState("9");
   const [histTolerance, setHistTolerance] = useState("0");
   const [stdDev, setStdDev] = useState("2");
+  const [holdBars, setHoldBars] = useState("5");
+  const [trendPeriod, setTrendPeriod] = useState("20");
+  const [volumeMultiple, setVolumeMultiple] = useState("1.8");
+  const [tailRatio, setTailRatio] = useState("0.01");
+  const [drawdownPct, setDrawdownPct] = useState("-5");
+  const [gainPct, setGainPct] = useState("5");
+  const [lookback, setLookback] = useState("10");
+  const [requireConfirmation, setRequireConfirmation] = useState(true);
   const [cooldownMin, setCooldownMin] = useState("60");
 
   const spec = KINDS.find((k) => k.value === kind)!;
@@ -279,6 +440,14 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
     if (d.signal) setSignal(d.signal);
     if (d.histTolerance) setHistTolerance(d.histTolerance);
     if (d.stdDev) setStdDev(d.stdDev);
+    if (d.holdBars) setHoldBars(d.holdBars);
+    if (d.trendPeriod) setTrendPeriod(d.trendPeriod);
+    if (d.volumeMultiple) setVolumeMultiple(d.volumeMultiple);
+    if (d.tailRatio) setTailRatio(d.tailRatio);
+    if (d.drawdownPct) setDrawdownPct(d.drawdownPct);
+    if (d.gainPct) setGainPct(d.gainPct);
+    if (d.lookback) setLookback(d.lookback);
+    if (d.requireConfirmation !== undefined) setRequireConfirmation(d.requireConfirmation === "1");
     if (!name) setName(newSpec.label);
   }
 
@@ -287,7 +456,7 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
       toast.error("请填策略名");
       return;
     }
-    const params: Record<string, number | string> = {};
+    const params: Record<string, number | string | boolean> = {};
     if (spec.needs.includes("period")) params.period = Number(period);
     if (spec.needs.includes("tolerance")) params.tolerance = Number(tolerance);
     if (spec.needs.includes("maType")) params.maType = maType;
@@ -300,6 +469,14 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
     if (spec.needs.includes("signal")) params.signal = Number(signal);
     if (spec.needs.includes("histTolerance")) params.histTolerance = Number(histTolerance);
     if (spec.needs.includes("stdDev")) params.stdDev = Number(stdDev);
+    if (spec.needs.includes("holdBars")) params.holdBars = Number(holdBars);
+    if (spec.needs.includes("trendPeriod")) params.trendPeriod = Number(trendPeriod);
+    if (spec.needs.includes("volumeMultiple")) params.volumeMultiple = Number(volumeMultiple);
+    if (spec.needs.includes("tailRatio")) params.tailRatio = Number(tailRatio);
+    if (spec.needs.includes("drawdownPct")) params.drawdownPct = Number(drawdownPct);
+    if (spec.needs.includes("gainPct")) params.gainPct = Number(gainPct);
+    if (spec.needs.includes("lookback")) params.lookback = Number(lookback);
+    if (spec.needs.includes("requireConfirmation")) params.requireConfirmation = requireConfirmation;
 
     const res = await fetch("/api/strategies", {
       method: "POST",
@@ -318,8 +495,9 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
       toast.error(typeof j.error === "string" ? j.error : "策略创建失败");
       return;
     }
+    const created = await res.json();
     toast.success("策略已添加");
-    onAdded();
+    onAdded(created);
   }
 
   return (
@@ -381,6 +559,36 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
         )}
         {spec.needs.includes("stdDev") && (
           <div className="flex flex-col gap-1.5"><Label>布林标准差倍数</Label><Input value={stdDev} onChange={(e) => setStdDev(e.target.value)} inputMode="decimal" /></div>
+        )}
+        {spec.needs.includes("holdBars") && (
+          <div className="flex flex-col gap-1.5"><Label>持有 K 线数 holdBars</Label><Input value={holdBars} onChange={(e) => setHoldBars(e.target.value)} inputMode="numeric" placeholder="形态触发后维持几根 K 线的级别" /></div>
+        )}
+        {spec.needs.includes("trendPeriod") && (
+          <div className="flex flex-col gap-1.5"><Label>趋势过滤 MA 周期</Label><Input value={trendPeriod} onChange={(e) => setTrendPeriod(e.target.value)} inputMode="numeric" placeholder="0=不过滤，20=MA20 上下方过滤" /></div>
+        )}
+        {spec.needs.includes("lookback") && (
+          <div className="flex flex-col gap-1.5"><Label>回看天数 lookback</Label><Input value={lookback} onChange={(e) => setLookback(e.target.value)} inputMode="numeric" placeholder="10=过去 10 日的均量和跌幅基准" /></div>
+        )}
+        {spec.needs.includes("volumeMultiple") && (
+          <div className="flex flex-col gap-1.5"><Label>放量倍数 volumeMultiple</Label><Input value={volumeMultiple} onChange={(e) => setVolumeMultiple(e.target.value)} inputMode="decimal" placeholder="1.8 = 今日量 ≥ 均量 × 1.8" /></div>
+        )}
+        {spec.needs.includes("tailRatio") && (
+          <div className="flex flex-col gap-1.5"><Label>下影回收 tailRatio</Label><Input value={tailRatio} onChange={(e) => setTailRatio(e.target.value)} inputMode="decimal" placeholder="0.01 = (close-low)/low ≥ 1%" /></div>
+        )}
+        {spec.needs.includes("drawdownPct") && (
+          <div className="flex flex-col gap-1.5"><Label>累计跌幅阈值 drawdownPct (%)</Label><Input value={drawdownPct} onChange={(e) => setDrawdownPct(e.target.value)} inputMode="decimal" placeholder="-5 = 近 lookback 日累计跌幅 ≤ -5%" /></div>
+        )}
+        {spec.needs.includes("gainPct") && (
+          <div className="flex flex-col gap-1.5"><Label>累计涨幅阈值 gainPct (%)</Label><Input value={gainPct} onChange={(e) => setGainPct(e.target.value)} inputMode="decimal" placeholder="5 = 近 lookback 日累计涨幅 ≥ 5%" /></div>
+        )}
+        {spec.needs.includes("requireConfirmation") && (
+          <div className="flex flex-col gap-1.5">
+            <Label>次日确认 requireConfirmation</Label>
+            <div className="flex items-center gap-2 h-10">
+              <Switch checked={requireConfirmation} onCheckedChange={setRequireConfirmation} />
+              <span className="text-xs text-muted-foreground">开启=climax 次日收阳才发信号（更稳，少 1 天延迟）</span>
+            </div>
+          </div>
         )}
         <div className="flex flex-col gap-1.5"><Label>冷却时间（分钟）</Label><Input value={cooldownMin} onChange={(e) => setCooldownMin(e.target.value)} inputMode="numeric" /></div>
       </div>

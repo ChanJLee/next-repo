@@ -5,9 +5,6 @@ import type { Quote } from "@/lib/data/yahoo";
 import { classify } from "@/lib/strategies/classify";
 import { StrategyKindEnum, StrategyParamsSchema, isSignalTransition, type Level } from "@/lib/strategies/types";
 import { isMarketOpen } from "@/lib/market/hours";
-import { getFeishuConfig } from "@/lib/settings";
-import { sendFeishuCard } from "@/lib/notifier/feishu";
-import { formatSignalCard } from "@/lib/notifier/format";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,7 +14,6 @@ interface CheckReport {
   symbolsChecked: number;
   strategiesEvaluated: number;
   transitions: number;
-  pushed: number;
   errors: { ticker?: string; strategy?: string; message: string }[];
   skipped?: string;
 }
@@ -35,7 +31,6 @@ async function runCheck(force: boolean): Promise<CheckReport> {
     symbolsChecked: 0,
     strategiesEvaluated: 0,
     transitions: 0,
-    pushed: 0,
     errors: [],
   };
 
@@ -58,8 +53,6 @@ async function runCheck(force: boolean): Promise<CheckReport> {
     report.errors.push({ message: `批量行情拉取失败: ${e instanceof Error ? e.message : String(e)}` });
     return report;
   }
-
-  const feishuCfg = await getFeishuConfig();
 
   for (const sym of symbols) {
     const quote = quoteMap.get(sym.ticker);
@@ -116,38 +109,12 @@ async function runCheck(force: boolean): Promise<CheckReport> {
       if (!isSignalTransition(prev, next)) continue;
       report.transitions += 1;
 
-      // 冷却检查
+      // 冷却检查：避免同一信号短时间内多次入库
       const cooldownAgo = new Date(Date.now() - strategy.cooldownSec * 1000);
       const recent = await prisma.strategySignal.findFirst({
         where: { strategyId: strategy.id, triggeredAt: { gt: cooldownAgo } },
       });
       if (recent) continue;
-
-      let pushed = false;
-      let pushError: string | undefined;
-      if (feishuCfg) {
-        try {
-          const card = formatSignalCard({
-            ticker: sym.ticker,
-            symbolName: sym.name,
-            strategyName: strategy.name,
-            level: next,
-            prevLevel: prev,
-            description: result.description,
-            price: quote.price,
-            changePercent: quote.changePercent,
-            triggeredAt: new Date(),
-          });
-          await sendFeishuCard(feishuCfg, card);
-          pushed = true;
-          report.pushed += 1;
-        } catch (e) {
-          pushError = e instanceof Error ? e.message : String(e);
-          report.errors.push({ ticker: sym.ticker, strategy: strategy.name, message: `推送失败: ${pushError}` });
-        }
-      } else {
-        pushError = "未配置飞书 webhook";
-      }
 
       await prisma.strategySignal.create({
         data: {
@@ -161,8 +128,7 @@ async function runCheck(force: boolean): Promise<CheckReport> {
             values: result.values,
             quote: { price: quote.price, changePercent: quote.changePercent, volume: quote.volume },
           }),
-          pushed,
-          pushError,
+          pushed: false,
         },
       });
     }

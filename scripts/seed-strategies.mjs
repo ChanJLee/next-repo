@@ -9,36 +9,16 @@
  * 重复运行不会重复插入：以 (symbolId, name) 判定是否已存在。
  */
 import { PrismaClient } from "@prisma/client";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 const prisma = new PrismaClient();
 
-// 4 条互补的默认策略：趋势 + 突破 + 动量 + 均值回归
-const DEFAULT_STRATEGIES = [
-  {
-    name: "MA200 趋势",
-    kind: "ma_trend",
-    params: { period: 200, tolerance: 0.5, maType: "sma" },
-    cooldownSec: 14400, // 4 小时
-  },
-  {
-    name: "52周通道突破",
-    kind: "donchian",
-    params: { period: 252 },
-    cooldownSec: 7200, // 2 小时
-  },
-  {
-    name: "12月动量",
-    kind: "roc_momentum",
-    params: { period: 252, longAbove: 15, shortBelow: -10 },
-    cooldownSec: 14400,
-  },
-  {
-    name: "RSI 超买超卖",
-    kind: "rsi_extreme",
-    params: { period: 14, longBelow: 30, shortAbove: 70 },
-    cooldownSec: 7200,
-  },
-];
+// 单一来源：src/lib/strategies/presets.json（UI 和 seed 共用）
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PRESETS_PATH = join(__dirname, "..", "src", "lib", "strategies", "presets.json");
+const DEFAULT_STRATEGIES = JSON.parse(readFileSync(PRESETS_PATH, "utf-8"));
 
 function parseTickers() {
   const idx = process.argv.indexOf("--tickers");
@@ -61,7 +41,7 @@ async function seed() {
     return;
   }
 
-  console.log(`📊 为 ${symbols.length} 只股票应用 ${DEFAULT_STRATEGIES.length} 条默认策略\n`);
+  console.log(`为 ${symbols.length} 只股票应用 ${DEFAULT_STRATEGIES.length} 条默认策略\n`);
 
   let created = 0;
   let skipped = 0;
@@ -71,7 +51,7 @@ async function seed() {
     const adds = DEFAULT_STRATEGIES.filter((s) => !existing.has(s.name));
 
     if (adds.length === 0) {
-      console.log(`• ${sym.ticker.padEnd(6)} 已有全部 4 条策略，跳过`);
+      console.log(`• ${sym.ticker.padEnd(6)} 已有全部 ${DEFAULT_STRATEGIES.length} 条策略，跳过`);
       skipped += DEFAULT_STRATEGIES.length;
       continue;
     }

@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   createChart,
+  createSeriesMarkers,
   CandlestickSeries,
   HistogramSeries,
   ColorType,
   type IChartApi,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
+  type SeriesMarker,
   type Time,
 } from "lightweight-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -155,6 +158,7 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const levelSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -180,6 +184,7 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
       wickUpColor: UP_COLOR,
       wickDownColor: DOWN_COLOR,
     });
+    markersRef.current = createSeriesMarkers(candleSeriesRef.current, []);
 
     volumeSeriesRef.current = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
@@ -209,6 +214,7 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
       levelSeriesRef.current = null;
+      markersRef.current = null;
     };
   }, []);
 
@@ -228,8 +234,12 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
   }, [candles]);
 
   useEffect(() => {
-    if (!levelSeriesRef.current) return;
-    if (levels.length === 0) { levelSeriesRef.current.setData([]); return; }
+    if (!levelSeriesRef.current || !markersRef.current) return;
+    if (levels.length === 0) {
+      levelSeriesRef.current.setData([]);
+      markersRef.current.setMarkers([]);
+      return;
+    }
     const levelMap = new Map(levels.map((l) => [l.time, l.level]));
     levelSeriesRef.current.setData(
       candles.map((c) => {
@@ -238,6 +248,21 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
         return { time: c.time as Time, value: 1, color };
       }),
     );
+    // 在 level 转向（变成 long 或 short）的当根 K 线上画箭头
+    const markers: SeriesMarker<Time>[] = [];
+    let prev = "neutral";
+    for (const c of candles) {
+      const lv = levelMap.get(c.time) ?? "neutral";
+      if (lv !== prev) {
+        if (lv === "long") {
+          markers.push({ time: c.time as Time, position: "belowBar", shape: "arrowUp", color: LEVEL_COLOR.long, text: "多" });
+        } else if (lv === "short") {
+          markers.push({ time: c.time as Time, position: "aboveBar", shape: "arrowDown", color: LEVEL_COLOR.short, text: "空" });
+        }
+      }
+      prev = lv;
+    }
+    markersRef.current.setMarkers(markers);
   }, [candles, levels]);
 
   return (

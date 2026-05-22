@@ -22,6 +22,9 @@ export const StrategyKindEnum = z.enum([
   "roc_momentum",   // N 日动量：上下阈值划分三态
   "donchian",       // Donchian channel：突破上轨=多，下轨=空
   "bb_reversion",   // 布林带均值回归：跌破下轨=多（买入机会），上穿上轨=空
+  "candle_pattern", // 经典蜡烛图反转形态：锤子/吞没/晨星等触发后短期 long，射击之星/暮星等触发后 short
+  "selling_climax", // 卖出高潮（VSA / Wyckoff）：下跌趋势中放量长下影+累计跌幅，触发后短期 long
+  "buying_climax",  // 买入高潮：上涨趋势中放量长上影+累计涨幅，触发后短期 short（仅告警，long-only 回测不入场）
 ]);
 export type StrategyKind = z.infer<typeof StrategyKindEnum>;
 
@@ -39,6 +42,14 @@ export const StrategyParamsSchema = z
     signal: z.number().int().positive().optional(),
     histTolerance: z.number().min(0).optional(),
     stdDev: z.number().positive().optional(),
+    holdBars: z.number().int().min(1).max(60).optional(),
+    trendPeriod: z.number().int().min(0).max(500).optional(),
+    volumeMultiple: z.number().positive().optional(),
+    tailRatio: z.number().min(0).max(1).optional(),
+    drawdownPct: z.number().max(0).optional(),
+    gainPct: z.number().min(0).optional(),
+    lookback: z.number().int().positive().max(250).optional(),
+    requireConfirmation: z.boolean().optional(),
   })
   .strict();
 export type StrategyParams = z.infer<typeof StrategyParamsSchema>;
