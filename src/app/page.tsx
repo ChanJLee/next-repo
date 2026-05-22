@@ -2,20 +2,23 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { LevelBadge } from "@/components/level-badge";
+import { LEVEL_LABEL } from "@/lib/strategies/types";
 import { TriggerCheckButton } from "./_components/trigger-check-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [symbolCount, ruleCount, enabledRuleCount, alerts] = await Promise.all([
+  const [symbolCount, strategyCount, enabledStrategyCount, signals, recentSignalCount] = await Promise.all([
     prisma.symbol.count(),
-    prisma.rule.count(),
-    prisma.rule.count({ where: { enabled: true } }),
-    prisma.alert.findMany({
+    prisma.strategy.count(),
+    prisma.strategy.count({ where: { enabled: true } }),
+    prisma.strategySignal.findMany({
       orderBy: { triggeredAt: "desc" },
       take: 20,
-      include: { rule: true, symbol: true },
+      include: { strategy: true, symbol: true },
     }),
+    prisma.strategySignal.count({ where: { triggeredAt: { gt: new Date(Date.now() - 30 * 86400_000) } } }),
   ]);
 
   return (
@@ -24,49 +27,49 @@ export default async function HomePage() {
         <h1 className="text-2xl font-semibold">总览</h1>
         <div className="flex gap-2">
           <TriggerCheckButton />
-          <Button asChild variant="outline">
-            <Link href="/watchlist">管理监控</Link>
-          </Button>
+          <Button asChild variant="outline"><Link href="/watchlist">管理监控</Link></Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Stat title="股票数" value={symbolCount} />
-        <Stat title="规则数" value={ruleCount} hint={`${enabledRuleCount} 启用中`} />
-        <Stat title="近 30 天告警" value={await prisma.alert.count({ where: { triggeredAt: { gt: new Date(Date.now() - 30 * 86400_000) } } })} />
+        <Stat title="策略数" value={strategyCount} hint={`${enabledStrategyCount} 启用中`} />
+        <Stat title="近 30 天信号" value={recentSignalCount} />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>最近告警</CardTitle>
-          <CardDescription>最近 20 条触发记录</CardDescription>
+          <CardTitle>最近信号</CardTitle>
+          <CardDescription>最近 20 次转多 / 转空触发</CardDescription>
         </CardHeader>
         <CardContent>
-          {alerts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">还没有告警记录。</p>
+          {signals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">还没有信号记录。</p>
           ) : (
             <div className="divide-y">
-              {alerts.map((a) => {
-                let snap: { description?: string; quote?: { price?: number; changePercent?: number } } = {};
-                try { snap = JSON.parse(a.snapshot); } catch { /* ignore */ }
+              {signals.map((sig) => {
+                let snap: { description?: string } = {};
+                try { snap = JSON.parse(sig.snapshot); } catch { /* ignore */ }
                 return (
-                  <div key={a.id} className="py-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                  <div key={sig.id} className="py-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="font-medium">{a.symbol.ticker}</span>
+                        <Link href={`/watchlist/${sig.symbolId}`} className="font-medium hover:underline">{sig.symbol.ticker}</Link>
                         <span className="text-muted-foreground">·</span>
-                        <span>{a.rule.name}</span>
-                        {a.pushed ? (
+                        <span>{sig.strategy.name}</span>
+                        <span className="text-xs text-muted-foreground">{LEVEL_LABEL[sig.prevLevel as keyof typeof LEVEL_LABEL]} →</span>
+                        <LevelBadge level={sig.level} />
+                        {sig.pushed ? (
                           <span className="ml-1 text-xs rounded bg-green-100 text-green-700 px-1.5 py-0.5">已推送</span>
                         ) : (
                           <span className="ml-1 text-xs rounded bg-amber-100 text-amber-700 px-1.5 py-0.5">未推送</span>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">{snap.description ?? "—"}</div>
-                      {a.pushError ? <div className="text-xs text-red-600 mt-1">{a.pushError}</div> : null}
+                      {sig.pushError ? <div className="text-xs text-red-600 mt-1">{sig.pushError}</div> : null}
                     </div>
                     <div className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(a.triggeredAt).toLocaleString("zh-CN", { hour12: false })}
+                      {new Date(sig.triggeredAt).toLocaleString("zh-CN", { hour12: false })}
                     </div>
                   </div>
                 );

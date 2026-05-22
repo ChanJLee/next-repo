@@ -1,0 +1,68 @@
+name: Strategy Check
+
+# 美股交易时段（UTC）：
+#   夏令时（3-11 月）：13:30–20:00 UTC = 9:30–16:00 ET
+#   冬令时（11-3 月）：14:30–21:00 UTC = 9:30–16:00 ET
+# cron 范围覆盖两者并留 30 min 缓冲；runCheck() 内部用 isMarketOpen() 再做一次过滤
+on:
+  schedule:
+    - cron: "*/30 13-21 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "忽略市场开闭时段强制评估"
+        type: boolean
+        default: false
+
+concurrency:
+  group: strategy-check
+  cancel-in-progress: false  # 不丢任何一次评估；前一个跑完再起下一个
+
+permissions:
+  contents: write  # 评估完成后写回 data/dev.db
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # 拿到 HEAD 即可，commit 用最新 main/分支
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Write env
+        run: echo 'DATABASE_URL="file:../data/dev.db"' > .env
+
+      - name: Run strategy check
+        run: pnpm check:run ${{ github.event.inputs.force == 'true' && '-- --force' || '' }}
+
+      - name: Commit DB updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/dev.db
+          if git diff --staged --quiet; then
+            echo "no DB changes"
+            exit 0
+          fi
+          git commit -m "chore(data): cron eval $(date -u +'%Y-%m-%d %H:%MZ') [skip ci]"
+          # 拉一下避免并发推送冲突（concurrency 已经串行化，这是额外保险）
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true
+          git push

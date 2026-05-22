@@ -1,17 +1,17 @@
 # Stock Monitor
 
-美股行情指标监控 + 钉钉推送，基于 Next.js 14（App Router）+ Prisma/SQLite。
+美股行情指标监控 + 飞书群机器人推送，基于 Next.js 14（App Router）+ Prisma/SQLite。
 
 ## 功能
 
-- Web 管理界面：股票/规则增删改、配置钉钉机器人
+- Web 管理界面：股票/规则增删改、配置飞书机器人
 - 支持指标：
   - **价格**：突破/跌破阈值、涨跌幅触线
   - **技术**：RSI、MA 金叉/死叉（SMA/EMA）、MACD 信号线穿越、布林带突破
   - **成交量**：放量（相对均量倍数）
 - 美股交易时段自动判断（含周末跳过）
 - 同一规则冷却去重，防止刷屏
-- 钉钉自定义机器人 + 加签推送
+- 飞书自定义机器人 + 签名校验，消息以 interactive card 形式发送
 
 ## 快速开始
 
@@ -29,7 +29,7 @@ pnpm dev
 
 第一次打开后：
 
-1. 进入 **设置** 页，填入钉钉 webhook + 加签 secret，点【发送测试消息】确认能收到
+1. 进入 **设置** 页，填入飞书自定义机器人 webhook + 签名密钥 secret，点【发送测试消息】确认能收到
 2. 进入 **监控列表**，添加 ticker（如 `AAPL`、`TSLA`、`NVDA`），再为每只股票加规则
 3. 回到首页点【手动检查】立即跑一次
 
@@ -63,20 +63,20 @@ src/
 ├── app/
 │   ├── page.tsx                 # 总览（统计 + 最近告警）
 │   ├── watchlist/page.tsx       # 股票/规则管理
-│   ├── settings/page.tsx        # 钉钉配置
+│   ├── settings/page.tsx        # 飞书配置
 │   └── api/
 │       ├── symbols/             # CRUD
 │       ├── rules/               # CRUD
 │       ├── alerts/              # 读取
-│       ├── settings/            # 钉钉配置 + 测试推送
+│       ├── settings/            # 飞书机器人配置 + 测试推送
 │       └── cron/check/          # ★ 核心检查入口（cron 调用）
 ├── lib/
 │   ├── data/yahoo.ts            # 行情 / K 线拉取
 │   ├── indicators/              # MA / RSI / MACD / 布林 / 成交量
 │   ├── rules/                   # types + evaluator
-│   ├── notifier/dingtalk.ts     # 加签 + POST
+│   ├── notifier/feishu.ts       # 签名校验 + interactive card POST
 │   ├── market/hours.ts          # 交易时段判断（NY 时区）
-│   └── settings.ts              # 钉钉配置 KV
+│   └── settings.ts              # 飞书配置 KV
 prisma/schema.prisma             # Symbol / Rule / Alert / Setting
 scripts/*.plist                  # launchd 模板
 ```

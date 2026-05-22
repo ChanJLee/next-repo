@@ -3,10 +3,13 @@ import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") ?? "50"), 200);
-  const alerts = await prisma.alert.findMany({
+  const symbolId = req.nextUrl.searchParams.get("symbolId");
+  const where = symbolId ? { symbolId: Number(symbolId) } : undefined;
+  const signals = await prisma.strategySignal.findMany({
+    where,
     orderBy: { triggeredAt: "desc" },
     take: limit,
-    include: { rule: true, symbol: true },
+    include: { strategy: true, symbol: true },
   });
-  return NextResponse.json(alerts);
+  return NextResponse.json(signals);
 }
