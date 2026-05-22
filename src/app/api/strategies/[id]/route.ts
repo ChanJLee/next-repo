@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 const Patch = z.object({
   enabled: z.boolean().optional(),
   name: z.string().min(1).max(60).optional(),

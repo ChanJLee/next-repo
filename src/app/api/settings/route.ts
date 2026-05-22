@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getFeishuConfig, setFeishuConfig } from "@/lib/settings";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const cfg = await getFeishuConfig();
   if (!cfg) return NextResponse.json({ webhook: "", secret: "", secretSet: false });
