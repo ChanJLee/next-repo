@@ -15,6 +15,7 @@
 
 # local sqlite data
 /data/
+/logs/
 
 # next.js
 /.next/

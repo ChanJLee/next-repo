@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Symbol {
+  id        Int      @id @default(autoincrement())
+  ticker    String   @unique
+  name      String?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  rules  Rule[]
+  alerts Alert[]
+}
+
+// type: "price" | "technical" | "volume"
+// indicator: 见 src/lib/rules/types.ts IndicatorEnum
+// params: JSON string. e.g. {"threshold":200} or {"fast":5,"slow":20,"maType":"sma"}
+model Rule {
+  id          Int      @id @default(autoincrement())
+  symbol      Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  symbolId    Int
+  name        String
+  type        String
+  indicator   String
+  params      String   @default("{}")
+  cooldownSec Int      @default(3600)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  alerts Alert[]
+
+  @@index([symbolId])
+}
+
+model Alert {
+  id           Int      @id @default(autoincrement())
+  rule         Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  ruleId       Int
+  symbol       Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  symbolId     Int
+  triggeredAt  DateTime @default(now())
+  snapshot     String   // JSON snapshot of values at trigger time
+  pushed       Boolean  @default(false)
+  pushError    String?
+
+  @@index([ruleId, triggeredAt])
+  @@index([symbolId, triggeredAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
