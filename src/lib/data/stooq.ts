@@ -12,13 +12,15 @@ function fmtDate(d: Date): string {
 }
 
 /**
- * 从 Stooq 拉日线 CSV。无需 API Key，一次返回整段历史。
+ * 从 Stooq 拉日线 CSV。日期范围接口需要免费 apikey（在 STOOQ_APIKEY env 配）。
  * CSV 格式：Date,Open,High,Low,Close,Volume
  */
 export async function getDailyCandlesFromStooq(ticker: string, days: number = 365): Promise<Candle[]> {
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400_000);
-  const url = `https://stooq.com/q/d/l/?s=${stooqSymbol(ticker)}&d1=${fmtDate(start)}&d2=${fmtDate(end)}&i=d`;
+  const apikey = process.env.STOOQ_APIKEY;
+  let url = `https://stooq.com/q/d/l/?s=${stooqSymbol(ticker)}&d1=${fmtDate(start)}&d2=${fmtDate(end)}&i=d`;
+  if (apikey) url += `&apikey=${encodeURIComponent(apikey)}`;
 
   const res = await fetch(url, {
     headers: { "User-Agent": "Mozilla/5.0 stock-monitor" },

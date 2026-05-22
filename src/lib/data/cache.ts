@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getDailyCandles, getQuotes, type Candle, type Quote } from "@/lib/data/yahoo";
 import { getDailyCandlesFromStooq } from "@/lib/data/stooq";
+import { getDailyCandlesFromYahooChart } from "@/lib/data/yahoo-chart";
 import { isMarketOpen } from "@/lib/market/hours";
 
 // TTL（毫秒）—— 盘中收紧，闭市放宽以减少对外部接口的请求频率
@@ -11,29 +12,41 @@ function quoteTTL(): number {
   return isMarketOpen() ? 60_000 : 5 * 60_000;
 }
 
-export type CandleSource = "stooq" | "yahoo";
+export type CandleSource = "yahoo-chart" | "stooq" | "yahoo";
 
 /**
- * 多数据源拉日线：Stooq 优先（无 API Key，限流宽松），失败时退回 yahoo。
+ * 多数据源拉日线：
+ *   1. Yahoo chart 公开接口（直接 fetch，绕过 v2 包 deprecation，最稳定）
+ *   2. Stooq CSV（需要 apikey 时会失败，留作备用）
+ *   3. yahoo-finance2 v2 historical（保留以防万一）
  */
 async function fetchCandlesFromAny(
   ticker: string,
   days: number,
 ): Promise<{ candles: Candle[]; source: CandleSource }> {
+  const errors: string[] = [];
+  try {
+    const candles = await getDailyCandlesFromYahooChart(ticker, days);
+    if (candles.length > 0) return { candles, source: "yahoo-chart" };
+    errors.push("yahoo-chart: empty");
+  } catch (e) {
+    errors.push(`yahoo-chart: ${e instanceof Error ? e.message : e}`);
+  }
   try {
     const candles = await getDailyCandlesFromStooq(ticker, days);
     if (candles.length > 0) return { candles, source: "stooq" };
-    throw new Error("stooq empty");
-  } catch (stooqErr) {
-    try {
-      const candles = await getDailyCandles(ticker, days);
-      return { candles, source: "yahoo" };
-    } catch (yahooErr) {
-      throw new Error(
-        `所有数据源都失败: stooq=${stooqErr instanceof Error ? stooqErr.message : stooqErr}; yahoo=${yahooErr instanceof Error ? yahooErr.message : yahooErr}`,
-      );
-    }
+    errors.push("stooq: empty");
+  } catch (e) {
+    errors.push(`stooq: ${e instanceof Error ? e.message : e}`);
   }
+  try {
+    const candles = await getDailyCandles(ticker, days);
+    if (candles.length > 0) return { candles, source: "yahoo" };
+    errors.push("yahoo-v2: empty");
+  } catch (e) {
+    errors.push(`yahoo-v2: ${e instanceof Error ? e.message : e}`);
+  }
+  throw new Error(`所有数据源都失败: ${errors.join("; ")}`);
 }
 
 async function upsertCandles(symbolId: number, candles: Candle[]): Promise<void> {
