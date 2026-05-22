@@ -17,7 +17,7 @@ export function TriggerCheckButton() {
       } else if (json.skipped) {
         toast.message(json.skipped, { description: "可以点【强制检查】绕过时段限制" });
       } else {
-        toast.success(`检查完成：评估 ${json.rulesEvaluated} 条，触发 ${json.triggered}，推送 ${json.pushed}`);
+        toast.success(`检查完成：评估 ${json.rulesEvaluated} 条，触发 ${json.triggered}，飞书推送 ${json.pushed}`);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "请求失败");

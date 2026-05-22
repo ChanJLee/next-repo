@@ -38,7 +38,7 @@ export function SettingsForm({ initial }: { initial: { webhook: string; hasSecre
       const res = await fetch("/api/settings/test", { method: "POST" });
       const j = await res.json();
       if (!res.ok) toast.error(j.error ?? "推送失败");
-      else toast.success("已发送测试消息，请查收钉钉群");
+      else toast.success("已发送测试消息，请查收飞书群");
     } finally {
       setTesting(false);
     }
@@ -47,9 +47,9 @@ export function SettingsForm({ initial }: { initial: { webhook: string; hasSecre
   return (
     <Card>
       <CardHeader>
-        <CardTitle>钉钉机器人</CardTitle>
+        <CardTitle>飞书机器人</CardTitle>
         <CardDescription>
-          在钉钉群 → 群设置 → 智能群助手 → 添加机器人 → 自定义。安全设置选择「加签」，把 webhook URL 和 secret 填到这里。
+          在飞书群 → 设置 → 群机器人 → 添加自定义机器人（Custom Bot）。安全设置选择「签名校验」，把 webhook URL 和 签名密钥 填到这里。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -57,16 +57,16 @@ export function SettingsForm({ initial }: { initial: { webhook: string; hasSecre
           <Label htmlFor="webhook">Webhook URL</Label>
           <Input
             id="webhook"
-            placeholder="https://oapi.dingtalk.com/robot/send?access_token=xxxxxx"
+            placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
             value={webhook}
             onChange={(e) => setWebhook(e.target.value)}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="secret">加签 Secret {initial.hasSecret ? <span className="text-xs text-muted-foreground">（已保存，填新值会覆盖）</span> : null}</Label>
+          <Label htmlFor="secret">签名密钥 Secret {initial.hasSecret ? <span className="text-xs text-muted-foreground">（已保存，填新值会覆盖）</span> : null}</Label>
           <Input
             id="secret"
-            placeholder="SECxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            placeholder="飞书自定义机器人安全设置中复制"
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
           />

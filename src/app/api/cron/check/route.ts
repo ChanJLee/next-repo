@@ -4,9 +4,9 @@ import { getDailyCandles, getQuotes } from "@/lib/data/yahoo";
 import { buildContext, evaluate } from "@/lib/rules/evaluator";
 import { IndicatorEnum, RuleParamsSchema } from "@/lib/rules/types";
 import { isMarketOpen } from "@/lib/market/hours";
-import { getDingTalkConfig } from "@/lib/settings";
-import { sendDingTalkMarkdown } from "@/lib/notifier/dingtalk";
-import { formatAlertMarkdown } from "@/lib/notifier/format";
+import { getFeishuConfig } from "@/lib/settings";
+import { sendFeishuCard } from "@/lib/notifier/feishu";
+import { formatAlertCard } from "@/lib/notifier/format";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -61,7 +61,7 @@ async function runCheck(force: boolean): Promise<CheckReport> {
   }
   const quoteMap = new Map(quotes.map((q) => [q.symbol, q]));
 
-  const dingCfg = await getDingTalkConfig();
+  const feishuCfg = await getFeishuConfig();
 
   for (const sym of symbols) {
     const quote = quoteMap.get(sym.ticker);
@@ -112,9 +112,9 @@ async function runCheck(force: boolean): Promise<CheckReport> {
       // 推送
       let pushed = false;
       let pushError: string | undefined;
-      if (dingCfg) {
+      if (feishuCfg) {
         try {
-          const { title, markdown } = formatAlertMarkdown({
+          const card = formatAlertCard({
             ticker: sym.ticker,
             symbolName: sym.name,
             ruleName: rule.name,
@@ -123,7 +123,7 @@ async function runCheck(force: boolean): Promise<CheckReport> {
             changePercent: quote.changePercent,
             triggeredAt: new Date(),
           });
-          await sendDingTalkMarkdown(dingCfg, title, markdown);
+          await sendFeishuCard(feishuCfg, card);
           pushed = true;
           report.pushed += 1;
         } catch (e) {
@@ -131,7 +131,7 @@ async function runCheck(force: boolean): Promise<CheckReport> {
           report.errors.push({ ticker: sym.ticker, rule: rule.name, message: `推送失败: ${pushError}` });
         }
       } else {
-        pushError = "未配置钉钉 webhook";
+        pushError = "未配置飞书 webhook";
       }
 
       await prisma.alert.create({

@@ -1,10 +1,10 @@
 import { SettingsForm } from "./_components/form";
-import { getDingTalkConfig } from "@/lib/settings";
+import { getFeishuConfig } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const cfg = await getDingTalkConfig();
+  const cfg = await getFeishuConfig();
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-semibold">设置</h1>

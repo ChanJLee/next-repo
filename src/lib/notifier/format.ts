@@ -1,4 +1,6 @@
-export function formatAlertMarkdown(args: {
+import type { FeishuCardPayload } from "./feishu";
+
+export function formatAlertCard(args: {
   ticker: string;
   symbolName?: string | null;
   ruleName: string;
@@ -6,27 +8,27 @@ export function formatAlertMarkdown(args: {
   price: number;
   changePercent: number;
   triggeredAt: Date;
-}): { title: string; markdown: string } {
+}): FeishuCardPayload {
   const { ticker, symbolName, ruleName, description, price, changePercent, triggeredAt } = args;
-  const arrow = changePercent >= 0 ? "📈" : "📉";
-  const sign = changePercent >= 0 ? "+" : "";
+  const up = changePercent >= 0;
+  const arrow = up ? "📈" : "📉";
+  const sign = up ? "+" : "";
   const ts = triggeredAt.toLocaleString("zh-CN", {
     timeZone: "Asia/Shanghai",
     hour12: false,
   });
 
-  const title = `${arrow} ${ticker} - ${ruleName}`;
-  const markdown = [
-    `### ${arrow} 行情告警：${ticker}${symbolName ? ` (${symbolName})` : ""}`,
-    ``,
-    `**规则**：${ruleName}`,
-    ``,
-    `**触发**：${description}`,
-    ``,
-    `**现价**：\`$${price.toFixed(2)}\`  **涨跌**：\`${sign}${changePercent.toFixed(2)}%\``,
-    ``,
-    `> ${ts}`,
-  ].join("\n");
-
-  return { title, markdown };
+  return {
+    title: `${arrow} ${ticker} · ${ruleName}`,
+    headerColor: up ? "red" : "green",
+    sections: [
+      [
+        `**${ticker}**${symbolName ? `  ${symbolName}` : ""}`,
+        `**规则**：${ruleName}`,
+        `**触发**：${description}`,
+        `**现价**：\`$${price.toFixed(2)}\`   **涨跌**：\`${sign}${changePercent.toFixed(2)}%\``,
+      ].join("\n"),
+    ],
+    footer: `${ts} · Stock Monitor`,
+  };
 }
