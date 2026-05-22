@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getDailyCandles, getQuotes } from "@/lib/data/yahoo";
+import { getCandlesCached, getQuotesCached } from "@/lib/data/cache";
+import type { Quote } from "@/lib/data/yahoo";
 import { buildContext, evaluate } from "@/lib/rules/evaluator";
 import { IndicatorEnum, RuleParamsSchema } from "@/lib/rules/types";
 import { isMarketOpen } from "@/lib/market/hours";
@@ -50,16 +51,14 @@ async function runCheck(force: boolean): Promise<CheckReport> {
   if (symbols.length === 0) return report;
   report.symbolsChecked = symbols.length;
 
-  // 一次拉所有报价
-  const tickers = symbols.map((s) => s.ticker);
-  let quotes;
+  // 批量报价（缓存命中的直接复用，过期/缺失的合并成一次 yahoo 请求）
+  let quoteMap: Map<string, Quote>;
   try {
-    quotes = await getQuotes(tickers);
+    quoteMap = await getQuotesCached(symbols.map((s) => ({ id: s.id, ticker: s.ticker })));
   } catch (e) {
     report.errors.push({ message: `批量行情拉取失败: ${e instanceof Error ? e.message : String(e)}` });
     return report;
   }
-  const quoteMap = new Map(quotes.map((q) => [q.symbol, q]));
 
   const feishuCfg = await getFeishuConfig();
 
@@ -70,13 +69,12 @@ async function runCheck(force: boolean): Promise<CheckReport> {
       continue;
     }
 
-    // 该 ticker 的规则中如果有技术类，才拉日线
-    const needsCandles = sym.rules.some((r) => r.type !== "price" || r.indicator?.startsWith("change_") === false);
+    // 仅在有技术指标 / 成交量规则时才需要 K 线
     const hasTechOrVol = sym.rules.some((r) => r.type === "technical" || r.type === "volume");
-    let candles: Awaited<ReturnType<typeof getDailyCandles>> = [];
-    if (needsCandles && hasTechOrVol) {
+    let candles: Awaited<ReturnType<typeof getCandlesCached>> = [];
+    if (hasTechOrVol) {
       try {
-        candles = await getDailyCandles(sym.ticker, 180);
+        candles = await getCandlesCached({ symbolId: sym.id, ticker: sym.ticker, days: 180 });
       } catch (e) {
         report.errors.push({ ticker: sym.ticker, message: `K线拉取失败: ${e instanceof Error ? e.message : String(e)}` });
       }

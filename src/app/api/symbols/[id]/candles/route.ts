@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getDailyCandles } from "@/lib/data/yahoo";
+import { getCandlesCached } from "@/lib/data/cache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,17 +15,22 @@ const RANGE_DAYS: Record<string, number> = {
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const id = Number(params.id);
   const range = req.nextUrl.searchParams.get("range") ?? "1m";
+  const force = req.nextUrl.searchParams.get("force") === "1";
   const days = RANGE_DAYS[range] ?? 35;
 
   const sym = await prisma.symbol.findUnique({ where: { id } });
   if (!sym) return NextResponse.json({ error: "symbol not found" }, { status: 404 });
 
   try {
-    const candles = await getDailyCandles(sym.ticker, days);
+    const candles = await getCandlesCached({ symbolId: id, ticker: sym.ticker, days, force });
+    // 仅返回时间窗口内的数据（缓存里可能包含更早的历史）
+    const since = new Date(Date.now() - days * 86400_000);
+    const inRange = candles.filter((c) => c.date >= since);
     return NextResponse.json({
       ticker: sym.ticker,
       range,
-      candles: candles.map((c) => ({
+      cached: !force,
+      candles: inRange.map((c) => ({
         time: c.date.toISOString().slice(0, 10),
         open: c.open,
         high: c.high,

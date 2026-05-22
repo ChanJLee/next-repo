@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { RefreshCw } from "lucide-react";
 
 interface Candle {
   time: string;
@@ -39,12 +40,14 @@ export function SymbolChartPanel({ symbolId, ticker }: { symbolId: number; ticke
   const [candles, setCandles] = useState<Candle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let aborted = false;
     setLoading(true);
     setError(null);
-    fetch(`/api/symbols/${symbolId}/candles?range=${range}`)
+    const force = refreshTick > 0;
+    fetch(`/api/symbols/${symbolId}/candles?range=${range}${force ? "&force=1" : ""}`)
       .then(async (res) => {
         const json = await res.json();
         if (aborted) return;
@@ -62,7 +65,7 @@ export function SymbolChartPanel({ symbolId, ticker }: { symbolId: number; ticke
         if (!aborted) setLoading(false);
       });
     return () => { aborted = true; };
-  }, [symbolId, range]);
+  }, [symbolId, range, refreshTick]);
 
   const latest = candles.at(-1);
   const prev = candles.at(-2);
@@ -83,7 +86,7 @@ export function SymbolChartPanel({ symbolId, ticker }: { symbolId: number; ticke
             </div>
           ) : null}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {RANGES.map((r) => (
             <Button
               key={r.value}
@@ -94,6 +97,9 @@ export function SymbolChartPanel({ symbolId, ticker }: { symbolId: number; ticke
               {r.label}
             </Button>
           ))}
+          <Button variant="ghost" size="icon" onClick={() => setRefreshTick((n) => n + 1)} disabled={loading} title="强制刷新（绕过缓存）">
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
         </div>
       </CardHeader>
       <CardContent>

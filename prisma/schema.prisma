@@ -14,8 +14,38 @@ model Symbol {
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  rules  Rule[]
-  alerts Alert[]
+  rules   Rule[]
+  alerts  Alert[]
+  candles Candle[]
+  quote   QuoteCache?
+}
+
+// 日线缓存。今日 K 线随盘中变化，updatedAt 控制 TTL；历史日基本不变。
+model Candle {
+  symbol    Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  symbolId  Int
+  date      DateTime
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Float
+  updatedAt DateTime @updatedAt
+
+  @@id([symbolId, date])
+  @@index([symbolId, date])
+}
+
+// 实时报价缓存，按短 TTL 复用。
+model QuoteCache {
+  symbol         Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  symbolId       Int      @id
+  price          Float
+  previousClose  Float
+  changePercent  Float
+  volume         Float
+  marketState    String?
+  fetchedAt      DateTime
 }
 
 // type: "price" | "technical" | "volume"
