@@ -68,9 +68,16 @@ export function WatchlistManager({ initialSymbols }: { initialSymbols: SymbolVM[
       toast.error(j.error?.fieldErrors ? "格式错误" : j.error ?? "添加失败");
       return;
     }
+    const j: { backfill?: { inserted: number; source: string } | null; backfillError?: string | null } = await res.json().catch(() => ({}));
     setNewTicker("");
     setNewName("");
-    toast.success("已添加");
+    if (j.backfill && j.backfill.inserted > 0) {
+      toast.success(`已添加 · 回填 ${j.backfill.inserted} 条历史（${j.backfill.source}）`);
+    } else if (j.backfillError) {
+      toast.warning(`已添加，但历史回填失败：${j.backfillError}`, { duration: 6000 });
+    } else {
+      toast.success("已添加");
+    }
     refresh();
   }
 

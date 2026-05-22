@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { SymbolChartPanel } from "./_components/chart-panel";
+import { BackfillButton } from "./_components/backfill-button";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function SymbolDetailPage({ params }: { params: { id: strin
     include: {
       rules: { orderBy: { createdAt: "desc" } },
       alerts: { orderBy: { triggeredAt: "desc" }, take: 10, include: { rule: true } },
+      _count: { select: { candles: true } },
     },
   });
   if (!sym) notFound();
@@ -36,10 +38,11 @@ export default async function SymbolDetailPage({ params }: { params: { id: strin
               {sym.name ? <span className="ml-3 text-base font-normal text-muted-foreground">{sym.name}</span> : null}
             </h1>
             <div className="text-xs text-muted-foreground mt-1">
-              {sym.rules.length} 条规则 · {sym.enabled ? "启用" : "停用"}
+              {sym.rules.length} 条规则 · 缓存 {sym._count.candles} 条日线 · {sym.enabled ? "启用" : "停用"}
             </div>
           </div>
         </div>
+        <BackfillButton symbolId={sym.id} />
       </div>
 
       <SymbolChartPanel symbolId={sym.id} ticker={sym.ticker} />
