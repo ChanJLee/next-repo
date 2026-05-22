@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,18 @@ import { LevelBadge } from "@/components/level-badge";
 import { Plus, Trash2, Activity, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { BacktestInline } from "./backtest-inline";
+
+interface BacktestSummary {
+  winRate: number;
+  excessReturn: number;
+  totalReturn: number;
+  numTrades: number;
+}
+
+// 默认拉取窗口 = 2 年（与 BacktestInline 一致）
+const SUMMARY_DAYS = 730;
 
 export interface StrategyVM {
   id: number;
@@ -82,10 +93,50 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
   const [strategies, setStrategies] = useState(initial);
   const [adding, setAdding] = useState(false);
   const [expandedBacktest, setExpandedBacktest] = useState<number | null>(null);
+  const [summaries, setSummaries] = useState<Record<number, BacktestSummary | "loading" | "failed">>({});
 
   function refresh() {
     router.refresh();
   }
+
+  // 进入页面 / 策略增删时，异步并行拉所有策略的回测摘要
+  const strategyKey = useMemo(() => strategies.map((s) => s.id).join(","), [strategies]);
+  useEffect(() => {
+    let aborted = false;
+    if (strategies.length === 0) {
+      setSummaries({});
+      return;
+    }
+    setSummaries((prev) => {
+      const next = { ...prev };
+      for (const s of strategies) if (!next[s.id] || next[s.id] === "failed") next[s.id] = "loading";
+      return next;
+    });
+    for (const s of strategies) {
+      fetch(`/api/strategies/${s.id}/backtest?days=${SUMMARY_DAYS}`)
+        .then(async (res) => {
+          if (aborted) return;
+          if (!res.ok) {
+            setSummaries((p) => ({ ...p, [s.id]: "failed" }));
+            return;
+          }
+          const j = await res.json();
+          setSummaries((p) => ({
+            ...p,
+            [s.id]: {
+              winRate: j.winRate,
+              excessReturn: j.excessReturn,
+              totalReturn: j.totalReturn,
+              numTrades: j.numTrades,
+            },
+          }));
+        })
+        .catch(() => {
+          if (!aborted) setSummaries((p) => ({ ...p, [s.id]: "failed" }));
+        });
+    }
+    return () => { aborted = true; };
+  }, [strategyKey, strategies]);
 
   async function toggle(id: number, enabled: boolean) {
     await fetch(`/api/strategies/${id}`, {
@@ -127,13 +178,15 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
               const isExpanded = expandedBacktest === s.id;
               const kindLabel = KINDS.find((k) => k.value === s.kind)?.label ?? s.kind;
               const paramObj = (() => { try { return JSON.parse(s.params); } catch { return {}; } })();
+              const summary = summaries[s.id];
               return (
                 <div key={s.id} className="rounded-md border">
                   <div className="flex items-center justify-between gap-3 px-3 py-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">{s.name}</span>
                         <LevelBadge level={s.currentLevel} />
+                        <BacktestSummaryBadge summary={summary} />
                         <span className="text-xs text-muted-foreground">· {kindLabel}</span>
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -161,6 +214,32 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function BacktestSummaryBadge({ summary }: { summary: BacktestSummary | "loading" | "failed" | undefined }) {
+  if (summary === undefined || summary === "loading") {
+    return <span className="text-xs text-muted-foreground">回测中…</span>;
+  }
+  if (summary === "failed") {
+    return <span className="text-xs text-muted-foreground">回测失败</span>;
+  }
+  if (summary.numTrades === 0) {
+    return (
+      <span className="text-xs text-muted-foreground" title={`近 ${SUMMARY_DAYS} 天无交易信号`}>
+        无交易
+      </span>
+    );
+  }
+  const winColor = summary.winRate >= 60 ? "text-green-700" : summary.winRate >= 45 ? "text-amber-700" : "text-red-700";
+  const excessColor = summary.excessReturn >= 0 ? "text-green-700" : "text-red-700";
+  const tooltip = `回测窗口 2 年：策略收益 ${summary.totalReturn.toFixed(1)}%，共 ${summary.numTrades} 次交易`;
+  return (
+    <span className="inline-flex items-center gap-1 text-xs" title={tooltip}>
+      <span className={cn("font-medium", winColor)}>胜率 {summary.winRate.toFixed(0)}%</span>
+      <span className="text-muted-foreground">·</span>
+      <span className={cn(excessColor)}>超额 {summary.excessReturn >= 0 ? "+" : ""}{summary.excessReturn.toFixed(1)}%</span>
+    </span>
   );
 }
 
