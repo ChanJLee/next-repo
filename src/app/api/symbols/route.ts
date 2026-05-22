@@ -11,7 +11,7 @@ const CreateSymbol = z.object({
 export async function GET() {
   const symbols = await prisma.symbol.findMany({
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { rules: true } } },
+    include: { _count: { select: { strategies: true } } },
   });
   return NextResponse.json(symbols);
 }

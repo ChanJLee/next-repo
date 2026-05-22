@@ -14,10 +14,10 @@ model Symbol {
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  rules   Rule[]
-  alerts  Alert[]
-  candles Candle[]
-  quote   QuoteCache?
+  strategies Strategy[]
+  signals    StrategySignal[]
+  candles    Candle[]
+  quote      QuoteCache?
 }
 
 // 日线缓存。今日 K 线随盘中变化，updatedAt 控制 TTL；历史日基本不变。
@@ -48,38 +48,42 @@ model QuoteCache {
   fetchedAt      DateTime
 }
 
-// type: "price" | "technical" | "volume"
-// indicator: 见 src/lib/rules/types.ts IndicatorEnum
-// params: JSON string. e.g. {"threshold":200} or {"fast":5,"slow":20,"maType":"sma"}
-model Rule {
-  id          Int      @id @default(autoincrement())
-  symbol      Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
-  symbolId    Int
-  name        String
-  type        String
-  indicator   String
-  params      String   @default("{}")
-  cooldownSec Int      @default(3600)
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now())
+// kind: 见 src/lib/strategies/types.ts StrategyKindEnum
+// params: JSON 字符串，按 kind 含不同字段（period/longBelow/shortAbove 等）
+// currentLevel: 最新一次评估结果，"long" | "neutral" | "short"
+model Strategy {
+  id           Int       @id @default(autoincrement())
+  symbol       Symbol    @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  symbolId     Int
+  name         String
+  kind         String
+  params       String    @default("{}")
+  cooldownSec  Int       @default(3600)
+  enabled      Boolean   @default(true)
+  currentLevel String    @default("neutral")
+  lastEvalAt   DateTime?
+  createdAt    DateTime  @default(now())
 
-  alerts Alert[]
+  signals StrategySignal[]
 
   @@index([symbolId])
 }
 
-model Alert {
-  id           Int      @id @default(autoincrement())
-  rule         Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  ruleId       Int
-  symbol       Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
-  symbolId     Int
-  triggeredAt  DateTime @default(now())
-  snapshot     String   // JSON snapshot of values at trigger time
-  pushed       Boolean  @default(false)
-  pushError    String?
+// 一条「转向多」或「转向空」的信号记录（中性不入库）
+model StrategySignal {
+  id          Int      @id @default(autoincrement())
+  strategy    Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  strategyId  Int
+  symbol      Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  symbolId    Int
+  level       String   // "long" | "short"
+  prevLevel   String   // 触发前的级别（含 neutral）
+  triggeredAt DateTime @default(now())
+  snapshot    String   // JSON 当时的指标快照
+  pushed      Boolean  @default(false)
+  pushError   String?
 
-  @@index([ruleId, triggeredAt])
+  @@index([strategyId, triggeredAt])
   @@index([symbolId, triggeredAt])
 }
 

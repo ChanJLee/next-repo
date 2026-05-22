@@ -11,12 +11,12 @@ const Patch = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const id = Number(params.id);
   const body = Patch.parse(await req.json());
-  const r = await prisma.rule.update({ where: { id }, data: body });
+  const r = await prisma.strategy.update({ where: { id }, data: body });
   return NextResponse.json(r);
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const id = Number(params.id);
-  await prisma.rule.delete({ where: { id } });
+  await prisma.strategy.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

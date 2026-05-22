@@ -1,4 +1,4 @@
-import { RSI, MACD, SMA, EMA, BollingerBands } from "technicalindicators";
+import { RSI, MACD, SMA, EMA, BollingerBands, ATR, ROC } from "technicalindicators";
 import type { Candle } from "@/lib/data/yahoo";
 
 export interface IndicatorSnapshot {
@@ -15,6 +15,12 @@ export interface IndicatorSnapshot {
   bbLower?: number;
   bbMiddle?: number;
   avgVolume?: number;
+  // 中长期指标
+  ma?: number;            // 单 MA（用于 price_above_ma / price_below_ma）
+  atr?: number;           // ATR(atrPeriod)
+  roc?: number;           // ROC(rocPeriod)，百分比
+  donchianHigh?: number;  // 过去 donchianPeriod 天内最高价（不含今日）
+  donchianLow?: number;   // 过去 donchianPeriod 天内最低价（不含今日）
 }
 
 export interface ComputeOptions {
@@ -28,6 +34,11 @@ export interface ComputeOptions {
   bbPeriod?: number;
   bbStdDev?: number;
   volumeWindow?: number;
+  // 中长期指标
+  maPeriod?: number;
+  atrPeriod?: number;
+  rocPeriod?: number;
+  donchianPeriod?: number;
 }
 
 export function computeIndicators(candles: Candle[], opts: ComputeOptions = {}): IndicatorSnapshot {
@@ -99,6 +110,37 @@ export function computeIndicators(candles: Candle[], opts: ComputeOptions = {}):
   if (volumes.length >= volWindow) {
     const recent = volumes.slice(-volWindow);
     snap.avgVolume = recent.reduce((a, b) => a + b, 0) / recent.length;
+  }
+
+  // 单 MA（price_above_ma / price_below_ma 用）
+  if (opts.maPeriod && closes.length > opts.maPeriod) {
+    const maFn = opts.maType === "ema" ? EMA : SMA;
+    const vals = maFn.calculate({ values: closes, period: opts.maPeriod });
+    snap.ma = vals.at(-1);
+  }
+
+  // ATR
+  if (opts.atrPeriod && candles.length > opts.atrPeriod) {
+    const atrVals = ATR.calculate({
+      high: candles.map((c) => c.high),
+      low: candles.map((c) => c.low),
+      close: candles.map((c) => c.close),
+      period: opts.atrPeriod,
+    });
+    snap.atr = atrVals.at(-1);
+  }
+
+  // ROC
+  if (opts.rocPeriod && closes.length > opts.rocPeriod) {
+    const rocVals = ROC.calculate({ values: closes, period: opts.rocPeriod });
+    snap.roc = rocVals.at(-1);
+  }
+
+  // Donchian Channel —— 取过去 donchianPeriod 天高低点，不含今日（用于"创 N 日新高/新低"判定）
+  if (opts.donchianPeriod && candles.length > opts.donchianPeriod) {
+    const window = candles.slice(-opts.donchianPeriod - 1, -1);
+    snap.donchianHigh = Math.max(...window.map((c) => c.high));
+    snap.donchianLow = Math.min(...window.map((c) => c.low));
   }
 
   return snap;

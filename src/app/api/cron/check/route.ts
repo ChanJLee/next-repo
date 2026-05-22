@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCandlesCached, getQuotesCached } from "@/lib/data/cache";
 import type { Quote } from "@/lib/data/yahoo";
-import { buildContext, evaluate } from "@/lib/rules/evaluator";
-import { IndicatorEnum, RuleParamsSchema } from "@/lib/rules/types";
+import { classify } from "@/lib/strategies/classify";
+import { StrategyKindEnum, StrategyParamsSchema, isSignalTransition, type Level } from "@/lib/strategies/types";
 import { isMarketOpen } from "@/lib/market/hours";
 import { getFeishuConfig } from "@/lib/settings";
 import { sendFeishuCard } from "@/lib/notifier/feishu";
-import { formatAlertCard } from "@/lib/notifier/format";
+import { formatSignalCard } from "@/lib/notifier/format";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,16 +15,16 @@ export const runtime = "nodejs";
 interface CheckReport {
   marketOpen: boolean;
   symbolsChecked: number;
-  rulesEvaluated: number;
-  triggered: number;
+  strategiesEvaluated: number;
+  transitions: number;
   pushed: number;
-  errors: { ticker?: string; rule?: string; message: string }[];
+  errors: { ticker?: string; strategy?: string; message: string }[];
   skipped?: string;
 }
 
 function unauthorized(req: NextRequest): boolean {
   const expected = process.env.CRON_SECRET;
-  if (!expected) return false; // 未设置时不校验，便于本地调试
+  if (!expected) return false;
   const got = req.headers.get("x-cron-secret") ?? req.nextUrl.searchParams.get("secret");
   return got !== expected;
 }
@@ -33,8 +33,8 @@ async function runCheck(force: boolean): Promise<CheckReport> {
   const report: CheckReport = {
     marketOpen: isMarketOpen(),
     symbolsChecked: 0,
-    rulesEvaluated: 0,
-    triggered: 0,
+    strategiesEvaluated: 0,
+    transitions: 0,
     pushed: 0,
     errors: [],
   };
@@ -45,13 +45,12 @@ async function runCheck(force: boolean): Promise<CheckReport> {
   }
 
   const symbols = await prisma.symbol.findMany({
-    where: { enabled: true, rules: { some: { enabled: true } } },
-    include: { rules: { where: { enabled: true } } },
+    where: { enabled: true, strategies: { some: { enabled: true } } },
+    include: { strategies: { where: { enabled: true } } },
   });
   if (symbols.length === 0) return report;
   report.symbolsChecked = symbols.length;
 
-  // 批量报价（缓存命中的直接复用，过期/缺失的合并成一次 yahoo 请求）
   let quoteMap: Map<string, Quote>;
   try {
     quoteMap = await getQuotesCached(symbols.map((s) => ({ id: s.id, ticker: s.ticker })));
@@ -69,53 +68,71 @@ async function runCheck(force: boolean): Promise<CheckReport> {
       continue;
     }
 
-    // 仅在有技术指标 / 成交量规则时才需要 K 线
-    const hasTechOrVol = sym.rules.some((r) => r.type === "technical" || r.type === "volume");
-    let candles: Awaited<ReturnType<typeof getCandlesCached>> = [];
-    if (hasTechOrVol) {
-      try {
-        candles = await getCandlesCached({ symbolId: sym.id, ticker: sym.ticker, days: 180 });
-      } catch (e) {
-        report.errors.push({ ticker: sym.ticker, message: `K线拉取失败: ${e instanceof Error ? e.message : String(e)}` });
-      }
+    // 一次拉够预热 + 评估所需的 K 线（按最大 period 估算）
+    const maxLookback = Math.max(
+      ...sym.strategies.map((s) => {
+        try {
+          const p = JSON.parse(s.params || "{}");
+          return Math.max(p.period ?? 0, (p.slow ?? 0) + (p.signal ?? 0));
+        } catch {
+          return 0;
+        }
+      }),
+      50,
+    );
+    let candles: Awaited<ReturnType<typeof getCandlesCached>>;
+    try {
+      candles = await getCandlesCached({ symbolId: sym.id, ticker: sym.ticker, days: maxLookback * 2 + 30 });
+    } catch (e) {
+      report.errors.push({ ticker: sym.ticker, message: `K线拉取失败: ${e instanceof Error ? e.message : String(e)}` });
+      continue;
     }
 
-    for (const rule of sym.rules) {
-      report.rulesEvaluated += 1;
-      const indicatorParsed = IndicatorEnum.safeParse(rule.indicator);
-      if (!indicatorParsed.success) {
-        report.errors.push({ ticker: sym.ticker, rule: rule.name, message: `未知 indicator: ${rule.indicator}` });
+    for (const strategy of sym.strategies) {
+      report.strategiesEvaluated += 1;
+      const kindParsed = StrategyKindEnum.safeParse(strategy.kind);
+      if (!kindParsed.success) {
+        report.errors.push({ ticker: sym.ticker, strategy: strategy.name, message: `未知 kind: ${strategy.kind}` });
         continue;
       }
       let params;
       try {
-        params = RuleParamsSchema.parse(JSON.parse(rule.params || "{}"));
-      } catch (e) {
-        report.errors.push({ ticker: sym.ticker, rule: rule.name, message: `params 解析失败` });
+        params = StrategyParamsSchema.parse(JSON.parse(strategy.params || "{}"));
+      } catch {
+        report.errors.push({ ticker: sym.ticker, strategy: strategy.name, message: `params 解析失败` });
         continue;
       }
 
-      const ctx = buildContext(quote, candles, params);
-      const result = evaluate(indicatorParsed.data, params, ctx);
-      if (!result.triggered) continue;
-      report.triggered += 1;
+      const result = classify(kindParsed.data, params, candles, quote.price);
+      const prev = strategy.currentLevel as Level;
+      const next = result.level;
+
+      // 无论是否转向都更新 currentLevel & lastEvalAt
+      await prisma.strategy.update({
+        where: { id: strategy.id },
+        data: { currentLevel: next, lastEvalAt: new Date() },
+      });
+
+      if (!isSignalTransition(prev, next)) continue;
+      report.transitions += 1;
 
       // 冷却检查
-      const cooldownAgo = new Date(Date.now() - rule.cooldownSec * 1000);
-      const recent = await prisma.alert.findFirst({
-        where: { ruleId: rule.id, triggeredAt: { gt: cooldownAgo } },
+      const cooldownAgo = new Date(Date.now() - strategy.cooldownSec * 1000);
+      const recent = await prisma.strategySignal.findFirst({
+        where: { strategyId: strategy.id, triggeredAt: { gt: cooldownAgo } },
       });
       if (recent) continue;
 
-      // 推送
       let pushed = false;
       let pushError: string | undefined;
       if (feishuCfg) {
         try {
-          const card = formatAlertCard({
+          const card = formatSignalCard({
             ticker: sym.ticker,
             symbolName: sym.name,
-            ruleName: rule.name,
+            strategyName: strategy.name,
+            level: next,
+            prevLevel: prev,
             description: result.description,
             price: quote.price,
             changePercent: quote.changePercent,
@@ -126,18 +143,20 @@ async function runCheck(force: boolean): Promise<CheckReport> {
           report.pushed += 1;
         } catch (e) {
           pushError = e instanceof Error ? e.message : String(e);
-          report.errors.push({ ticker: sym.ticker, rule: rule.name, message: `推送失败: ${pushError}` });
+          report.errors.push({ ticker: sym.ticker, strategy: strategy.name, message: `推送失败: ${pushError}` });
         }
       } else {
         pushError = "未配置飞书 webhook";
       }
 
-      await prisma.alert.create({
+      await prisma.strategySignal.create({
         data: {
-          ruleId: rule.id,
+          strategyId: strategy.id,
           symbolId: sym.id,
+          level: next,
+          prevLevel: prev,
           snapshot: JSON.stringify({
-            indicator: indicatorParsed.data,
+            kind: kindParsed.data,
             description: result.description,
             values: result.values,
             quote: { price: quote.price, changePercent: quote.changePercent, volume: quote.volume },
@@ -160,6 +179,5 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  // 方便手动浏览器/curl 触发
   return POST(req);
 }
