@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd 定时触发模板。
+  使用方法：
+    1. 把下面 __CRON_SECRET__ 替换成 .env 里的 CRON_SECRET
+    2. 把 __LOG_DIR__ 替换成绝对路径（建议 /Users/chan/Documents/next-repo/logs）
+    3. 把 __PORT__ 替换成 dev/prod 运行端口（默认 3000）
+    4. cp scripts/com.stockmonitor.check.plist ~/Library/LaunchAgents/
+    5. launchctl load ~/Library/LaunchAgents/com.stockmonitor.check.plist
+    6. 停止：launchctl unload ~/Library/LaunchAgents/com.stockmonitor.check.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.stockmonitor.check</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/curl</string>
+        <string>-sS</string>
+        <string>-X</string>
+        <string>POST</string>
+        <string>-H</string>
+        <string>x-cron-secret: __CRON_SECRET__</string>
+        <string>http://127.0.0.1:__PORT__/api/cron/check</string>
+    </array>
+
+    <!-- 每 5 分钟触发一次 -->
+    <key>StartInterval</key>
+    <integer>300</integer>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>__LOG_DIR__/cron.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>__LOG_DIR__/cron.err.log</string>
+</dict>
+</plist>
