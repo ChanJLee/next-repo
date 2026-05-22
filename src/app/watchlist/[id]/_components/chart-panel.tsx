@@ -47,6 +47,16 @@ const RANGES: { value: "1w" | "1m" | "3m" | "1y"; label: string }[] = [
 const UP_COLOR = "#16a34a";
 const DOWN_COLOR = "#dc2626";
 
+async function readJson(res: Response): Promise<any> {
+  const ct = res.headers.get("content-type") ?? "";
+  if (!ct.includes("application/json")) {
+    const text = await res.text();
+    const snippet = text.replace(/\s+/g, " ").trim().slice(0, 120);
+    throw new Error(`HTTP ${res.status} 返回非 JSON：${snippet}`);
+  }
+  return res.json();
+}
+
 export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: number; ticker: string; strategies: StrategyOption[] }) {
   const [range, setRange] = useState<"1w" | "1m" | "3m" | "1y">("1m");
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -63,9 +73,9 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
     const force = refreshTick > 0;
     fetch(`/api/symbols/${symbolId}/candles?range=${range}${force ? "&force=1" : ""}`)
       .then(async (res) => {
-        const json = await res.json();
+        const json = await readJson(res);
         if (aborted) return;
-        if (!res.ok) { setError(json.error ?? "拉取失败"); setCandles([]); }
+        if (!res.ok) { setError(json.error ?? `HTTP ${res.status}`); setCandles([]); }
         else setCandles(json.candles ?? []);
       })
       .catch((e) => { if (!aborted) setError(e instanceof Error ? e.message : "网络错误"); })
@@ -78,7 +88,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
     let aborted = false;
     fetch(`/api/strategies/${selectedStrategyId}/levels?range=${range}`)
       .then(async (res) => {
-        const json = await res.json();
+        const json = await readJson(res);
         if (aborted) return;
         if (!res.ok) setLevels([]);
         else setLevels(json.items ?? []);
