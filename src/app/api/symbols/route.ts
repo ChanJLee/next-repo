@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { backfillCandles } from "@/lib/data/cache";
 
+export const dynamic = "force-dynamic";
+
 const CreateSymbol = z.object({
   ticker: z.string().min(1).max(20).transform((s) => s.trim().toUpperCase()),
   name: z.string().max(100).optional(),

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getFeishuConfig } from "@/lib/settings";
 import { sendFeishuCard } from "@/lib/notifier/feishu";
 
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   const cfg = await getFeishuConfig();
   if (!cfg) return NextResponse.json({ error: "尚未配置 webhook" }, { status: 400 });

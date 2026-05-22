@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { StrategyInputSchema } from "@/lib/strategies/types";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const symbolId = req.nextUrl.searchParams.get("symbolId");
   const where = symbolId ? { symbolId: Number(symbolId) } : undefined;
