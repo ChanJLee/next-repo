@@ -13,9 +13,8 @@
 # testing
 /coverage
 
-# local sqlite data — dev.db is committed as production snapshot for Actions cron
-/data/*
-!/data/dev.db
+# local sqlite data —— Turso 上线后不再 commit DB；本地开发的 dev.db 留作开发库
+/data/
 /logs/
 
 # next.js
