@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { triggerCheckAction } from "./trigger-check.action";
 
 export function TriggerCheckButton() {
   const [loading, setLoading] = useState(false);
@@ -10,14 +11,16 @@ export function TriggerCheckButton() {
   async function run(force: boolean) {
     setLoading(true);
     try {
-      const res = await fetch(`/api/cron/check${force ? "?force=1" : ""}`, { method: "POST" });
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json.error ?? "执行失败");
-      } else if (json.skipped) {
-        toast.message(json.skipped, { description: "可以点【强制检查】绕过时段限制" });
+      const report = await triggerCheckAction(force);
+      if (report.skipped) {
+        toast.message(report.skipped, { description: "可以点【强制检查】绕过时段限制" });
+      } else if (report.errors.length > 0) {
+        toast.warning(
+          `检查完成：策略 ${report.strategiesEvaluated} 条，转向 ${report.transitions}`,
+          { description: `${report.errors.length} 个错误，查看部署日志` },
+        );
       } else {
-        toast.success(`检查完成：策略 ${json.strategiesEvaluated} 条，转向 ${json.transitions}，飞书推送 ${json.pushed}`);
+        toast.success(`检查完成：策略 ${report.strategiesEvaluated} 条，转向 ${report.transitions}`);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "请求失败");
