@@ -11,8 +11,13 @@ export const AUTH_COOKIE_NAME = "app_auth";
 const PAYLOAD = "v1";
 
 function getSecret(): string | undefined {
-  // 优先使用独立的 AUTH_SECRET；缺省则回落到 APP_PASSWORD（密码本身做签名 key 也 OK）
-  return process.env.AUTH_SECRET || process.env.APP_PASSWORD;
+  // 签名 key 优先级：独立 AUTH_SECRET → APP_API_KEY → APP_PASSWORD（兼容旧命名）
+  return process.env.AUTH_SECRET || process.env.APP_API_KEY || process.env.APP_PASSWORD;
+}
+
+/** 用户访问凭证的环境变量。优先 APP_API_KEY，向后兼容 APP_PASSWORD */
+export function getExpectedApiKey(): string | undefined {
+  return process.env.APP_API_KEY || process.env.APP_PASSWORD;
 }
 
 async function hmacHex(secret: string, data: string): Promise<string> {
@@ -54,7 +59,7 @@ export async function verifyAuthCookie(value: string | undefined | null): Promis
   return constantTimeEqual(sig, expected);
 }
 
-/** APP_PASSWORD 未配置 → auth 整体关闭（用于本地开发不强制配密码） */
+/** 未配置访问凭证时 → auth 整体关闭（本地开发免配置） */
 export function isAuthEnabled(): boolean {
-  return !!process.env.APP_PASSWORD;
+  return !!getExpectedApiKey();
 }
