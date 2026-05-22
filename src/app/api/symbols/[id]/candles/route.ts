@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCandlesCached } from "@/lib/data/cache";
+import { getStooqApikeyFromCookie } from "@/lib/data/stooq-key";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!sym) return NextResponse.json({ error: "symbol not found" }, { status: 404 });
 
   try {
-    const candles = await getCandlesCached({ symbolId: id, ticker: sym.ticker, days, force });
+    const candles = await getCandlesCached({ symbolId: id, ticker: sym.ticker, days, force, stooqApikey: getStooqApikeyFromCookie() });
     // 仅返回时间窗口内的数据（缓存里可能包含更早的历史）
     const since = new Date(Date.now() - days * 86400_000);
     const inRange = candles.filter((c) => c.date >= since);

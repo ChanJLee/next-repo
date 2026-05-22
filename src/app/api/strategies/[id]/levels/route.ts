@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCandlesCached } from "@/lib/data/cache";
+import { getStooqApikeyFromCookie } from "@/lib/data/stooq-key";
 import { levelSeries } from "@/lib/strategies/classify";
 import { StrategyKindEnum, StrategyParamsSchema } from "@/lib/strategies/types";
 
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       symbolId: strategy.symbolId,
       ticker: strategy.symbol.ticker,
       days: fetchDays,
+      stooqApikey: getStooqApikeyFromCookie(),
     });
     const series = levelSeries(kindParsed.data, paramsObj, allCandles);
 

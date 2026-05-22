@@ -1,5 +1,6 @@
 import { SettingsForm } from "./_components/form";
 import { getFeishuConfig } from "@/lib/settings";
+import { StooqApikeySettings } from "@/components/stooq-apikey-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function SettingsPage() {
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-semibold">设置</h1>
       <SettingsForm initial={{ webhook: cfg?.webhook ?? "", hasSecret: !!cfg?.secret }} />
+      <StooqApikeySettings />
     </div>
   );
 }

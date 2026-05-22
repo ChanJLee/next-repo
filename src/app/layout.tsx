@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import Link from "next/link";
+import { StooqApikeyBanner } from "@/components/stooq-apikey-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,7 +27,10 @@ export default function RootLayout({
             </nav>
           </div>
         </header>
-        <main className="container py-6">{children}</main>
+        <main className="container py-6 space-y-4">
+          <StooqApikeyBanner />
+          {children}
+        </main>
         <Toaster richColors position="top-right" />
       </body>
     </html>

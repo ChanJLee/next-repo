@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { backfillCandles } from "@/lib/data/cache";
+import { getStooqApikeyFromCookie } from "@/lib/data/stooq-key";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     let backfill: { inserted: number; source: string } | null = null;
     let backfillError: string | null = null;
     try {
-      backfill = await backfillCandles(sym.id, sym.ticker, 365);
+      backfill = await backfillCandles(sym.id, sym.ticker, 365, getStooqApikeyFromCookie());
     } catch (e) {
       backfillError = e instanceof Error ? e.message : String(e);
     }

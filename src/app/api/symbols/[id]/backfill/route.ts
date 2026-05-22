@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { backfillCandles } from "@/lib/data/cache";
+import { getStooqApikeyFromCookie } from "@/lib/data/stooq-key";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!sym) return NextResponse.json({ error: "symbol not found" }, { status: 404 });
 
   try {
-    const result = await backfillCandles(id, sym.ticker, days);
+    const result = await backfillCandles(id, sym.ticker, days, getStooqApikeyFromCookie());
     return NextResponse.json({ ok: true, ticker: sym.ticker, days, ...result });
   } catch (e) {
     return NextResponse.json(

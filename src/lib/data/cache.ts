@@ -12,32 +12,33 @@ function quoteTTL(): number {
   return isMarketOpen() ? 60_000 : 5 * 60_000;
 }
 
-export type CandleSource = "yahoo-chart" | "stooq" | "yahoo";
+export type CandleSource = "stooq" | "yahoo-chart" | "yahoo";
 
 /**
- * 多数据源拉日线：
- *   1. Yahoo chart 公开接口（直接 fetch，绕过 v2 包 deprecation，最稳定）
- *   2. Stooq CSV（需要 apikey 时会失败，留作备用）
- *   3. yahoo-finance2 v2 historical（保留以防万一）
+ * 多数据源拉日线（按可靠性排序，Stooq 在云 IP 下更稳）：
+ *   1. Stooq CSV（首选，需要 apikey 限额更高；无 key 也能调但更易限流）
+ *   2. Yahoo chart 公开接口（兜底；Vercel/AWS IP 段经常被 Yahoo 软封锁）
+ *   3. yahoo-finance2 v2 historical（最终兜底）
  */
 async function fetchCandlesFromAny(
   ticker: string,
   days: number,
+  stooqApikey?: string,
 ): Promise<{ candles: Candle[]; source: CandleSource }> {
   const errors: string[] = [];
+  try {
+    const candles = await getDailyCandlesFromStooq(ticker, days, stooqApikey);
+    if (candles.length > 0) return { candles, source: "stooq" };
+    errors.push("stooq: empty");
+  } catch (e) {
+    errors.push(`stooq: ${e instanceof Error ? e.message : e}`);
+  }
   try {
     const candles = await getDailyCandlesFromYahooChart(ticker, days);
     if (candles.length > 0) return { candles, source: "yahoo-chart" };
     errors.push("yahoo-chart: empty");
   } catch (e) {
     errors.push(`yahoo-chart: ${e instanceof Error ? e.message : e}`);
-  }
-  try {
-    const candles = await getDailyCandlesFromStooq(ticker, days);
-    if (candles.length > 0) return { candles, source: "stooq" };
-    errors.push("stooq: empty");
-  } catch (e) {
-    errors.push(`stooq: ${e instanceof Error ? e.message : e}`);
   }
   try {
     const candles = await getDailyCandles(ticker, days);
@@ -67,13 +68,14 @@ interface CacheCandlesOpts {
   ticker: string;
   days: number;
   force?: boolean;
+  stooqApikey?: string;
 }
 
 /**
  * 获取 K 线 —— 优先用 DB 缓存，过期/不足时再向数据源拉。
  * 拉到的数据会 upsert 回缓存。失败时若有旧缓存则降级返回旧数据。
  */
-export async function getCandlesCached({ symbolId, ticker, days, force }: CacheCandlesOpts): Promise<Candle[]> {
+export async function getCandlesCached({ symbolId, ticker, days, force, stooqApikey }: CacheCandlesOpts): Promise<Candle[]> {
   const since = new Date(Date.now() - days * 86400_000);
 
   if (!force) {
@@ -91,7 +93,7 @@ export async function getCandlesCached({ symbolId, ticker, days, force }: CacheC
   }
 
   try {
-    const { candles } = await fetchCandlesFromAny(ticker, days);
+    const { candles } = await fetchCandlesFromAny(ticker, days, stooqApikey);
     await upsertCandles(symbolId, candles);
     return candles;
   } catch (e) {
@@ -123,8 +125,9 @@ export async function backfillCandles(
   symbolId: number,
   ticker: string,
   days: number = 730,
+  stooqApikey?: string,
 ): Promise<{ inserted: number; source: CandleSource }> {
-  const { candles, source } = await fetchCandlesFromAny(ticker, days);
+  const { candles, source } = await fetchCandlesFromAny(ticker, days, stooqApikey);
   await upsertCandles(symbolId, candles);
   return { inserted: candles.length, source };
 }

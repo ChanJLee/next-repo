@@ -12,15 +12,20 @@ function fmtDate(d: Date): string {
 }
 
 /**
- * 从 Stooq 拉日线 CSV。日期范围接口需要免费 apikey（在 STOOQ_APIKEY env 配）。
+ * 从 Stooq 拉日线 CSV。日期范围接口需要免费 apikey（参数传入；
+ * 不传则用 process.env.STOOQ_APIKEY 作为兜底，再退化到无 key 调用）。
  * CSV 格式：Date,Open,High,Low,Close,Volume
  */
-export async function getDailyCandlesFromStooq(ticker: string, days: number = 365): Promise<Candle[]> {
+export async function getDailyCandlesFromStooq(
+  ticker: string,
+  days: number = 365,
+  apikey?: string,
+): Promise<Candle[]> {
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400_000);
-  const apikey = process.env.STOOQ_APIKEY;
+  const key = apikey ?? process.env.STOOQ_APIKEY;
   let url = `https://stooq.com/q/d/l/?s=${stooqSymbol(ticker)}&d1=${fmtDate(start)}&d2=${fmtDate(end)}&i=d`;
-  if (apikey) url += `&apikey=${encodeURIComponent(apikey)}`;
+  if (key) url += `&apikey=${encodeURIComponent(key)}`;
 
   const res = await fetch(url, {
     headers: { "User-Agent": "Mozilla/5.0 stock-monitor" },
