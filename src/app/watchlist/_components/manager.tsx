@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, LineChart } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export interface RuleVM {
   id: number;
@@ -139,12 +140,17 @@ function SymbolCard({
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div>
           <CardTitle className="text-lg">
-            {symbol.ticker}
+            <Link href={`/watchlist/${symbol.id}`} className="hover:underline">{symbol.ticker}</Link>
             {symbol.name ? <span className="ml-2 text-sm font-normal text-muted-foreground">{symbol.name}</span> : null}
           </CardTitle>
           <div className="text-xs text-muted-foreground mt-1">{symbol.rules.length} 条规则</div>
         </div>
         <div className="flex items-center gap-3">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/watchlist/${symbol.id}`}>
+              <LineChart className="h-4 w-4" /> 走势图
+            </Link>
+          </Button>
           <div className="flex items-center gap-2">
             <Switch checked={symbol.enabled} onCheckedChange={onToggle} />
             <span className="text-xs text-muted-foreground">{symbol.enabled ? "启用" : "停用"}</span>
