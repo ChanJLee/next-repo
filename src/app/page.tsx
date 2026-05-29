@@ -14,6 +14,27 @@ export const dynamic = "force-dynamic";
 // 吃的是本页的函数时限。对齐 cron 路由，给足 60s（Hobby 上限）防 504。
 export const maxDuration = 60;
 
+// 大盘基准（取 watchlist 中同 ticker 的标的）
+const BENCHMARKS = [
+  { ticker: "SPY", name: "标普 500" },
+  { ticker: "QQQM", name: "纳指 100" },
+];
+
+function sma(closes: number[], n: number): number | null {
+  if (closes.length < n) return null;
+  let s = 0;
+  for (let i = closes.length - n; i < closes.length; i++) s += closes[i];
+  return s / n;
+}
+
+function marketTrend(price: number | null, ma50: number | null, ma200: number | null): { label: string; cls: string } {
+  if (price == null || ma200 == null) return { label: "数据不足", cls: "bg-slate-100 text-slate-600" };
+  if (ma50 != null && price > ma50 && ma50 > ma200) return { label: "多头排列 · 上行", cls: "bg-green-100 text-green-700" };
+  if (ma50 != null && price < ma50 && ma50 < ma200) return { label: "空头排列 · 下行", cls: "bg-red-100 text-red-700" };
+  if (price > ma200) return { label: "MA200 上方 · 偏多", cls: "bg-green-50 text-green-700" };
+  return { label: "MA200 下方 · 偏空", cls: "bg-red-50 text-red-700" };
+}
+
 /** 今日（美东）零点的 UTC 时刻——美股按 ET 交易日划分。 */
 function startOfTodayET(): Date {
   const now = new Date();
@@ -64,6 +85,26 @@ export default async function HomePage() {
     /* 行情拉取失败时简报里标注 */
   }
 
+  // 大盘基准（用 watchlist 里已有的 SPY/QQQM，趋势直接读 DB 缓存 K 线算）
+  const benchmarks = (
+    await Promise.all(
+      BENCHMARKS.map(async (b) => {
+        const sym = enabledSymbols.find((s) => s.ticker === b.ticker);
+        if (!sym) return null;
+        const rows = await prisma.candle.findMany({
+          where: { symbolId: sym.id },
+          orderBy: { date: "desc" },
+          take: 220,
+          select: { close: true },
+        });
+        const closes = rows.map((r) => r.close).reverse();
+        const q = quotes.get(b.ticker);
+        const price = q?.price ?? closes.at(-1) ?? null;
+        return { ...b, id: sym.id, price, changePercent: q?.changePercent ?? null, ma50: sma(closes, 50), ma200: sma(closes, 200) };
+      }),
+    )
+  ).filter((x): x is NonNullable<typeof x> => x !== null);
+
   const marketOpen = isMarketOpen();
   const levelCount = { long: 0, neutral: 0, short: 0 } as Record<string, number>;
   for (const g of levelGroups) levelCount[g.currentLevel] = g._count;
@@ -79,6 +120,44 @@ export default async function HomePage() {
           <Button asChild variant="outline"><Link href="/watchlist">管理监控</Link></Button>
         </div>
       </div>
+
+      {/* 大盘 */}
+      {benchmarks.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-base">大盘</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {benchmarks.map((b) => {
+                const t = marketTrend(b.price, b.ma50, b.ma200);
+                const distMa200 = b.price != null && b.ma200 != null ? ((b.price - b.ma200) / b.ma200) * 100 : null;
+                return (
+                  <Link key={b.id} href={`/watchlist/${b.id}`} className="rounded-md border px-4 py-3 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="font-medium">{b.name}</span>
+                        <span className="ml-1 text-xs text-muted-foreground">{b.ticker}</span>
+                      </div>
+                      <span className={`rounded px-2 py-0.5 text-xs ${t.cls}`}>{t.label}</span>
+                    </div>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <span className="text-xl font-semibold">{b.price != null ? `$${b.price.toFixed(2)}` : "—"}</span>
+                      {b.changePercent != null ? (
+                        <span className={`text-sm font-medium ${b.changePercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {b.changePercent >= 0 ? "+" : ""}{b.changePercent.toFixed(2)}%
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {b.ma50 != null ? `MA50 ${b.ma50.toFixed(2)}` : "MA50 —"} · {b.ma200 != null ? `MA200 ${b.ma200.toFixed(2)}` : "MA200 —"}
+                      {distMa200 != null ? ` · 距 MA200 ${distMa200 >= 0 ? "+" : ""}${distMa200.toFixed(1)}%` : ""}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* 今日简报 */}
       <Card>

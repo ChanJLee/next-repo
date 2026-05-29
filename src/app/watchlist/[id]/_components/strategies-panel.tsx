@@ -290,9 +290,7 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
             <CardDescription>每条策略给出 多 / 中 / 空 三种判断，转向多或空时推送飞书</CardDescription>
             <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
               {backtestStatusText(lastRunAt, running, windowLabel(windowDays))}
-              <span title={METRIC_HELP} className="inline-flex cursor-help" aria-label="指标说明">
-                <Info className="h-3 w-3 shrink-0" />
-              </span>
+              <MetricHelp />
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -414,6 +412,31 @@ const METRIC_HELP =
   "胜率 = 盈利交易笔数 / 总交易笔数（一次多头买入→卖出算一笔；只看正负、不看幅度）。\n" +
   "超额 = 策略收益 − 买入持有收益（正=跑赢「躺平不动」，负=不如躺平）。\n" +
   "回测为 long-only，不含手续费/滑点/分红；判断策略值不值得做以「超额」为主、胜率为辅。";
+
+// 点击弹出的指标说明气泡（原生 title 只在悬停且有延迟，点击/触屏无反应）。
+function MetricHelp() {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex text-muted-foreground hover:text-foreground"
+        aria-label="指标说明"
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      {open ? (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
+          <div className="absolute left-0 top-6 z-50 w-72 whitespace-pre-line rounded-md border bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-md">
+            {METRIC_HELP}
+          </div>
+        </>
+      ) : null}
+    </span>
+  );
+}
 
 function BacktestSummaryBadge({ summary, kind, windowLbl }: { summary: ClientSummary | "loading" | "failed" | undefined; kind: string; windowLbl: string }) {
   if (ALERT_ONLY_KINDS.has(kind)) {
