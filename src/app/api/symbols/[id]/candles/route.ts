@@ -17,7 +17,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const id = Number(params.id);
   const range = req.nextUrl.searchParams.get("range") ?? "1m";
   const force = req.nextUrl.searchParams.get("force") === "1";
-  const days = RANGE_DAYS[range] ?? 35;
+  // 支持显式 days（客户端回测要拉更长窗口，超出 range 档位上限），否则按 range 档位。
+  const daysParam = req.nextUrl.searchParams.get("days");
+  const days = daysParam ? Math.max(60, Math.min(Number(daysParam) || 0, 3650)) : (RANGE_DAYS[range] ?? 35);
 
   const sym = await prisma.symbol.findUnique({ where: { id } });
   if (!sym) return NextResponse.json({ error: "symbol not found" }, { status: 404 });
