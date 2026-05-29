@@ -6,7 +6,7 @@ import { LevelBadge } from "@/components/level-badge";
 import { LEVEL_LABEL } from "@/lib/strategies/types";
 import { isMarketOpen } from "@/lib/market/hours";
 import { getQuotesCached } from "@/lib/data/cache";
-import type { Quote } from "@/lib/data/yahoo";
+import { getQuotes, type Quote } from "@/lib/data/yahoo";
 import { TriggerCheckButton } from "./_components/trigger-check-button";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +38,14 @@ function maCross(closes: number[], lookback = 20): { golden: boolean; recent: bo
   const pm200 = sma(prev, 200);
   const recent = pm50 != null && pm200 != null ? pm50 > pm200 !== golden : false;
   return { golden, recent };
+}
+
+// VIX 水平解读：低=自满(风险积累)，高=恐慌(常见阶段底)
+function vixRegime(v: number): { label: string; cls: string; hint: string } {
+  if (v >= 30) return { label: "恐慌", cls: "bg-red-100 text-red-700", hint: ">30 多见于急跌/阶段底" };
+  if (v >= 20) return { label: "警觉", cls: "bg-amber-100 text-amber-700", hint: "波动加大，风险偏好转弱" };
+  if (v >= 13) return { label: "平静", cls: "bg-green-100 text-green-700", hint: "正常波动区间" };
+  return { label: "自满", cls: "bg-orange-100 text-orange-700", hint: "<13 警惕过度乐观、风险积累" };
 }
 
 function marketTrend(price: number | null, ma50: number | null, ma200: number | null): { label: string; cls: string } {
@@ -130,6 +138,15 @@ export default async function HomePage() {
   const above50 = w50.filter((x) => (x.last as number) > (x.ma50 as number)).length;
   const breadthPct = w200.length > 0 ? (above200 / w200.length) * 100 : null;
 
+  // VIX 恐慌指数（不在 watchlist，直接拉 ^VIX 实时报价，失败降级）
+  let vix: { price: number; changePercent: number } | null = null;
+  try {
+    const [q] = await getQuotes(["^VIX"]);
+    if (q) vix = { price: q.price, changePercent: q.changePercent };
+  } catch {
+    /* 行情失败时不显示 */
+  }
+
   const marketOpen = isMarketOpen();
   const levelCount = { long: 0, neutral: 0, short: 0 } as Record<string, number>;
   for (const g of levelGroups) levelCount[g.currentLevel] = g._count;
@@ -189,6 +206,20 @@ export default async function HomePage() {
                 );
               })}
             </div>
+            {/* VIX 恐慌指数 */}
+            {vix ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3 text-xs">
+                <span className="text-muted-foreground">VIX 恐慌指数：</span>
+                <span className="text-sm font-semibold">{vix.price.toFixed(1)}</span>
+                {/* VIX 上涨=恐慌升温，用红色 */}
+                <span className={vix.changePercent >= 0 ? "text-red-600" : "text-green-600"}>
+                  {vix.changePercent >= 0 ? "+" : ""}{vix.changePercent.toFixed(1)}%
+                </span>
+                <span className={`rounded px-2 py-0.5 ${vixRegime(vix.price).cls}`}>{vixRegime(vix.price).label}</span>
+                <span className="text-muted-foreground">{vixRegime(vix.price).hint}</span>
+              </div>
+            ) : null}
+
             {/* 监控池迷你宽度 */}
             {w200.length > 0 ? (
               <div className="mt-3 border-t pt-3 text-xs">
