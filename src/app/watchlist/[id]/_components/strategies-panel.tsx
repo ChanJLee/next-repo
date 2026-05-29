@@ -54,9 +54,9 @@ const KINDS: KindSpec[] = [
   {
     value: "rsi_extreme",
     label: "RSI 极值",
-    description: "RSI 超卖（< 30）= 多（加仓机会），超买（> 70）= 空。均值回归思路。",
-    needs: ["period", "longBelow", "shortAbove"],
-    defaults: { period: "14", longBelow: "30", shortAbove: "70" },
+    description: "趋势过滤的均值回归：仅在上涨趋势（价 > MA）中、RSI 超卖（< 30）才转多，持有到 RSI 回中位（默认 50）才退出，不一碰阈值就跑。空头镜像。",
+    needs: ["period", "longBelow", "shortAbove", "exitMid", "trendPeriod"],
+    defaults: { period: "14", longBelow: "30", shortAbove: "70", exitMid: "50", trendPeriod: "200" },
   },
   {
     value: "macd",
@@ -452,6 +452,7 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
   const [maType, setMaType] = useState<"sma" | "ema">("sma");
   const [longBelow, setLongBelow] = useState("30");
   const [shortAbove, setShortAbove] = useState("70");
+  const [exitMid, setExitMid] = useState("50");
   const [longAbove, setLongAbove] = useState("10");
   const [shortBelow, setShortBelow] = useState("-10");
   const [fast, setFast] = useState("12");
@@ -481,6 +482,7 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
     if (d.maType) setMaType(d.maType as "sma" | "ema");
     if (d.longBelow) setLongBelow(d.longBelow);
     if (d.shortAbove) setShortAbove(d.shortAbove);
+    if (d.exitMid) setExitMid(d.exitMid);
     if (d.longAbove) setLongAbove(d.longAbove);
     if (d.shortBelow) setShortBelow(d.shortBelow);
     if (d.fast) setFast(d.fast);
@@ -510,6 +512,7 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
     if (spec.needs.includes("maType")) params.maType = maType;
     if (spec.needs.includes("longBelow")) params.longBelow = Number(longBelow);
     if (spec.needs.includes("shortAbove")) params.shortAbove = Number(shortAbove);
+    if (spec.needs.includes("exitMid")) params.exitMid = Number(exitMid);
     if (spec.needs.includes("longAbove")) params.longAbove = Number(longAbove);
     if (spec.needs.includes("shortBelow")) params.shortBelow = Number(shortBelow);
     if (spec.needs.includes("fast")) params.fast = Number(fast);
@@ -586,6 +589,9 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
         )}
         {spec.needs.includes("shortAbove") && (
           <div className="flex flex-col gap-1.5"><Label>空阈值（RSI &gt;）</Label><Input value={shortAbove} onChange={(e) => setShortAbove(e.target.value)} inputMode="decimal" /></div>
+        )}
+        {spec.needs.includes("exitMid") && (
+          <div className="flex flex-col gap-1.5"><Label>退出中位值 exitMid</Label><Input value={exitMid} onChange={(e) => setExitMid(e.target.value)} inputMode="decimal" placeholder="RSI 回到该值才平仓（多头），默认 50" /></div>
         )}
         {spec.needs.includes("longAbove") && (
           <div className="flex flex-col gap-1.5"><Label>多阈值（ROC % &gt;）</Label><Input value={longAbove} onChange={(e) => setLongAbove(e.target.value)} inputMode="decimal" /></div>

@@ -35,6 +35,8 @@ export const StrategyParamsSchema = z
     maType: z.enum(["sma", "ema"]).optional(),
     longBelow: z.number().optional(),
     shortAbove: z.number().optional(),
+    exitMid: z.number().min(1).max(99).optional(), // RSI 回到该中位值才退出持仓
+
     longAbove: z.number().optional(),
     shortBelow: z.number().optional(),
     fast: z.number().int().positive().optional(),

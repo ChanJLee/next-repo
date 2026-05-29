@@ -82,19 +82,56 @@ function seriesMaTrend(params: StrategyParams, ctx: SeriesContext): Level[] {
 }
 
 // ---------- rsi_extreme ----------
+// 趋势过滤 + 持有到 RSI 回中位（有状态）：
+//   - 多：仅在上涨趋势（close > MA(trendPeriod)）中、RSI 跌破 longBelow 入场；
+//         持有到 RSI 回升到 exitMid 才退出（不再一碰阈值就跑）。
+//   - 空：镜像——下跌趋势中 RSI 上穿 shortAbove 入场，持有到 RSI 跌回 (100-exitMid)。
+//   - trendPeriod=0 关闭趋势过滤。空头仅用于级别带/告警，long-only 回测不交易。
 function seriesRsiExtreme(params: StrategyParams, ctx: SeriesContext): Level[] {
   const period = params.period ?? 14;
   const longBelow = params.longBelow ?? 30;
   const shortAbove = params.shortAbove ?? 70;
-  const vals = RSI.calculate({ values: ctx.closes, period });
-  const offset = ctx.closes.length - vals.length;
-  return ctx.closes.map((_, i) => {
-    if (i < offset) return "neutral";
-    const r = vals[i - offset];
-    if (r < longBelow) return "long";
-    if (r > shortAbove) return "short";
-    return "neutral";
-  });
+  const exitMid = params.exitMid ?? 50;
+  const trendPeriod = params.trendPeriod ?? 200;
+
+  const rsi = RSI.calculate({ values: ctx.closes, period });
+  const rsiOffset = ctx.closes.length - rsi.length;
+
+  let sma: number[] = [];
+  let smaOffset = 0;
+  if (trendPeriod > 0) {
+    sma = SMA.calculate({ values: ctx.closes, period: trendPeriod });
+    smaOffset = ctx.closes.length - sma.length;
+  }
+
+  const shortExit = 100 - exitMid;
+  const levels: Level[] = new Array(ctx.closes.length).fill("neutral");
+  let state: Level = "neutral";
+
+  for (let i = 0; i < ctx.closes.length; i++) {
+    const r = i >= rsiOffset ? rsi[i - rsiOffset] : undefined;
+    if (r === undefined) {
+      levels[i] = "neutral"; // 指标预热期
+      continue;
+    }
+    const trendReady = trendPeriod === 0 || i >= smaOffset;
+    const ma = trendPeriod > 0 && i >= smaOffset ? sma[i - smaOffset] : undefined;
+    const inUptrend = trendPeriod === 0 || (ma !== undefined && ctx.closes[i] > ma);
+    const inDowntrend = trendPeriod === 0 || (ma !== undefined && ctx.closes[i] < ma);
+
+    // 先判退出（回到中位）
+    if (state === "long" && r >= exitMid) state = "neutral";
+    else if (state === "short" && r <= shortExit) state = "neutral";
+
+    // 再判入场（仅从空仓进，且趋势就绪）
+    if (state === "neutral" && trendReady) {
+      if (r < longBelow && inUptrend) state = "long";
+      else if (r > shortAbove && inDowntrend) state = "short";
+    }
+
+    levels[i] = state;
+  }
+  return levels;
 }
 
 // ---------- macd ----------

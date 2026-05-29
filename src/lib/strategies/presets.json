@@ -30,9 +30,9 @@
   {
     "name": "RSI 超买超卖",
     "kind": "rsi_extreme",
-    "params": { "period": 14, "longBelow": 30, "shortAbove": 70 },
+    "params": { "period": 14, "longBelow": 30, "shortAbove": 70, "exitMid": 50, "trendPeriod": 200 },
     "cooldownSec": 7200,
-    "description": "RSI < 30 = 多（超卖反弹），> 70 = 空（超买回落）。"
+    "description": "上涨趋势中 RSI < 30 转多，持有到 RSI 回 50 退出（趋势过滤 + 持有到中位）。空头镜像。"
   },
   {
     "name": "布林带均值回归",
