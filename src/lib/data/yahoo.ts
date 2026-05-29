@@ -1,6 +1,7 @@
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
 
-yahooFinance.suppressNotices(["yahooSurvey"]);
+// ripHistorical: v3 的 historical() 已废弃并内部转发到 chart()，这里只作最终兜底，静音通知。
+const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey", "ripHistorical"] });
 
 export interface Quote {
   symbol: string;

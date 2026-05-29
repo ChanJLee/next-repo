@@ -18,7 +18,7 @@ export type CandleSource = "stooq" | "yahoo-chart" | "yahoo";
  * 多数据源拉日线（按可靠性排序，Stooq 在云 IP 下更稳）：
  *   1. Stooq CSV（首选，需要 apikey 限额更高；无 key 也能调但更易限流）
  *   2. Yahoo chart 公开接口（兜底；Vercel/AWS IP 段经常被 Yahoo 软封锁）
- *   3. yahoo-finance2 v2 historical（最终兜底）
+ *   3. yahoo-finance2 v3 historical（最终兜底）
  */
 async function fetchCandlesFromAny(
   ticker: string,
