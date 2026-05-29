@@ -348,7 +348,7 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">{s.name}</span>
                         <LevelBadge level={s.currentLevel} />
-                        <BacktestSummaryBadge summary={summary} />
+                        <BacktestSummaryBadge summary={summary} kind={s.kind} />
                         <span className="text-xs text-muted-foreground">· {kindLabel}</span>
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -382,7 +382,21 @@ function backtestStatusText(lastRunAt: number | null, running: boolean): string 
   return `回测于 ${d.toLocaleString("zh-CN", { hour12: false })}（${rel}${stale}）`;
 }
 
-function BacktestSummaryBadge({ summary }: { summary: ClientSummary | "loading" | "failed" | undefined }) {
+// 只发单边「空」信号的策略：long-only 回测必然 0 笔交易，胜率/超额对它无意义，
+// 单独标成告警型，避免和「参数太严/真没触发」的无交易混淆。
+const ALERT_ONLY_KINDS = new Set(["buying_climax"]);
+
+function BacktestSummaryBadge({ summary, kind }: { summary: ClientSummary | "loading" | "failed" | undefined; kind: string }) {
+  if (ALERT_ONLY_KINDS.has(kind)) {
+    return (
+      <span
+        className="text-xs text-amber-700"
+        title="该策略只发空信号（顶部派发告警），long-only 回测不产生交易，胜率/超额不适用"
+      >
+        顶部告警 · 仅空信号
+      </span>
+    );
+  }
   if (summary === "loading") {
     return <span className="text-xs text-muted-foreground">回测中…</span>;
   }
