@@ -8,22 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LevelBadge } from "@/components/level-badge";
-import { Plus, Trash2, Activity, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Plus, Trash2, Activity, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { BacktestInline } from "./backtest-inline";
 import { STRATEGY_PRESETS, type StrategyPreset } from "@/lib/strategies/presets";
-
-interface BacktestSummary {
-  winRate: number;
-  excessReturn: number;
-  totalReturn: number;
-  numTrades: number;
-}
-
-// 默认拉取窗口 = 2 年（与 BacktestInline 一致）
-const SUMMARY_DAYS = 730;
+import {
+  runAllBacktests,
+  loadCache,
+  strategySig,
+  BACKTEST_WINDOW_DAYS,
+  type ClientSummary,
+} from "./backtest-client";
 
 export interface StrategyVM {
   id: number;
@@ -110,15 +106,17 @@ const KINDS: KindSpec[] = [
   },
 ];
 
-export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: number; ticker: string; initial: StrategyVM[] }) {
+export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticker?: string; initial: StrategyVM[] }) {
   const router = useRouter();
   const [strategies, setStrategies] = useState(initial);
   const [adding, setAdding] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
   const [busyPresetName, setBusyPresetName] = useState<string | null>(null);
   const [bulkAdding, setBulkAdding] = useState(false);
-  const [expandedBacktest, setExpandedBacktest] = useState<number | null>(null);
-  const [summaries, setSummaries] = useState<Record<number, BacktestSummary | "loading" | "failed">>({});
+  // 回测结果：本地计算、点按钮触发，结果连同时间戳缓存到 localStorage。
+  const [summaries, setSummaries] = useState<Record<number, ClientSummary | "loading" | "failed">>({});
+  const [lastRunAt, setLastRunAt] = useState<number | null>(null);
+  const [running, setRunning] = useState(false);
 
   const existingNames = useMemo(() => new Set(strategies.map((s) => s.name)), [strategies]);
   const missingPresetCount = STRATEGY_PRESETS.filter((p) => !existingNames.has(p.name)).length;
@@ -207,44 +205,53 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
     router.refresh();
   }
 
-  // 进入页面 / 策略增删时，异步并行拉所有策略的回测摘要
-  const strategyKey = useMemo(() => strategies.map((s) => s.id).join(","), [strategies]);
+  // 进页面只读本地缓存（不自动回测）：只采用「签名仍匹配」的结果，
+  // 参数被改过的策略视为未回测，留给用户决定是否重测。
   useEffect(() => {
-    let aborted = false;
-    if (strategies.length === 0) {
-      setSummaries({});
-      return;
+    const cache = loadCache(symbolId);
+    if (!cache) return;
+    const map: Record<number, ClientSummary> = {};
+    for (const s of strategies) {
+      const hit = cache.items[s.id];
+      if (hit && hit.sig === strategySig(s)) map[s.id] = hit.summary;
     }
+    setSummaries(map);
+    setLastRunAt(cache.at);
+    // 只在挂载时读一次缓存
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function runBacktests() {
+    if (running || strategies.length === 0) return;
+    setRunning(true);
     setSummaries((prev) => {
       const next = { ...prev };
-      for (const s of strategies) if (!next[s.id] || next[s.id] === "failed") next[s.id] = "loading";
+      for (const s of strategies) next[s.id] = "loading";
       return next;
     });
-    for (const s of strategies) {
-      fetch(`/api/strategies/${s.id}/backtest?days=${SUMMARY_DAYS}`)
-        .then(async (res) => {
-          if (aborted) return;
-          if (!res.ok) {
-            setSummaries((p) => ({ ...p, [s.id]: "failed" }));
-            return;
-          }
-          const j = await res.json();
-          setSummaries((p) => ({
-            ...p,
-            [s.id]: {
-              winRate: j.winRate,
-              excessReturn: j.excessReturn,
-              totalReturn: j.totalReturn,
-              numTrades: j.numTrades,
-            },
-          }));
-        })
-        .catch(() => {
-          if (!aborted) setSummaries((p) => ({ ...p, [s.id]: "failed" }));
-        });
+    try {
+      const { cache, failed } = await runAllBacktests(symbolId, strategies);
+      const map: Record<number, ClientSummary | "failed"> = {};
+      for (const s of strategies) {
+        const hit = cache.items[s.id];
+        map[s.id] = hit ? hit.summary : "failed";
+      }
+      setSummaries(map);
+      setLastRunAt(cache.at);
+      if (failed.length === 0) toast.success(`已回测 ${strategies.length} 条策略`);
+      else toast.warning(`${strategies.length - failed.length} 条成功，${failed.length} 条失败`);
+    } catch (e) {
+      // 拉数据失败：清掉 loading，提示
+      setSummaries((prev) => {
+        const next = { ...prev };
+        for (const s of strategies) if (next[s.id] === "loading") delete next[s.id];
+        return next;
+      });
+      toast.error(e instanceof Error ? e.message : "回测失败");
+    } finally {
+      setRunning(false);
     }
-    return () => { aborted = true; };
-  }, [strategyKey, strategies]);
+  }
 
   async function toggle(id: number, enabled: boolean) {
     await fetch(`/api/strategies/${id}`, {
@@ -259,7 +266,6 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
     if (!confirm("删除该策略？")) return;
     await fetch(`/api/strategies/${id}`, { method: "DELETE" });
     setStrategies((prev) => prev.filter((s) => s.id !== id));
-    if (expandedBacktest === id) setExpandedBacktest(null);
   }
 
   return (
@@ -269,8 +275,12 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
           <div>
             <CardTitle className="text-base">策略</CardTitle>
             <CardDescription>每条策略给出 多 / 中 / 空 三种判断，转向多或空时推送飞书</CardDescription>
+            <p className="mt-1 text-xs text-muted-foreground">{backtestStatusText(lastRunAt, running)}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={running || strategies.length === 0} onClick={runBacktests}>
+              <Activity className={cn("h-4 w-4", running && "animate-pulse")} /> {running ? "回测中…" : "回测全部"}
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setShowPresets(!showPresets)}>
               <Sparkles className="h-4 w-4" /> 从预设添加 {missingPresetCount > 0 ? `(${missingPresetCount})` : null}
             </Button>
@@ -328,7 +338,6 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
         ) : (
           <div className="space-y-2">
             {strategies.map((s) => {
-              const isExpanded = expandedBacktest === s.id;
               const kindLabel = KINDS.find((k) => k.value === s.kind)?.label ?? s.kind;
               const paramObj = (() => { try { return JSON.parse(s.params); } catch { return {}; } })();
               const summary = summaries[s.id];
@@ -347,19 +356,10 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setExpandedBacktest(isExpanded ? null : s.id)}>
-                        <Activity className="h-4 w-4" /> 回测
-                        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                      </Button>
                       <Switch checked={s.enabled} onCheckedChange={(en) => toggle(s.id, en)} />
                       <Button variant="ghost" size="icon" onClick={() => del(s.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
-                  {isExpanded ? (
-                    <div className="border-t bg-muted/30 p-3">
-                      <BacktestInline strategyId={s.id} ticker={ticker} />
-                    </div>
-                  ) : null}
                 </div>
               );
             })}
@@ -370,16 +370,31 @@ export function StrategiesPanel({ symbolId, ticker, initial }: { symbolId: numbe
   );
 }
 
-function BacktestSummaryBadge({ summary }: { summary: BacktestSummary | "loading" | "failed" | undefined }) {
-  if (summary === undefined || summary === "loading") {
+function backtestStatusText(lastRunAt: number | null, running: boolean): string {
+  if (running) return "回测中…（本地计算）";
+  if (!lastRunAt) return "尚未回测，点右上「回测全部」按当前参数本地回测";
+  const d = new Date(lastRunAt);
+  const ageMs = Date.now() - lastRunAt;
+  const ageDay = Math.floor(ageMs / 86400_000);
+  const ageHr = Math.floor(ageMs / 3600_000);
+  const rel = ageDay >= 1 ? `${ageDay} 天前` : ageHr >= 1 ? `${ageHr} 小时前` : "刚刚";
+  const stale = ageDay >= 1 ? "，可能已过期，建议重新回测" : "";
+  return `回测于 ${d.toLocaleString("zh-CN", { hour12: false })}（${rel}${stale}）`;
+}
+
+function BacktestSummaryBadge({ summary }: { summary: ClientSummary | "loading" | "failed" | undefined }) {
+  if (summary === "loading") {
     return <span className="text-xs text-muted-foreground">回测中…</span>;
+  }
+  if (summary === undefined) {
+    return <span className="text-xs text-muted-foreground">未回测</span>;
   }
   if (summary === "failed") {
     return <span className="text-xs text-muted-foreground">回测失败</span>;
   }
   if (summary.numTrades === 0) {
     return (
-      <span className="text-xs text-muted-foreground" title={`近 ${SUMMARY_DAYS} 天无交易信号`}>
+      <span className="text-xs text-muted-foreground" title={`近 ${BACKTEST_WINDOW_DAYS} 天无交易信号`}>
         无交易
       </span>
     );
