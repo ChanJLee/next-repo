@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LevelBadge } from "@/components/level-badge";
-import { Plus, Trash2, Activity, Sparkles } from "lucide-react";
+import { Plus, Trash2, Activity, Sparkles, Info } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -288,7 +288,12 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
           <div>
             <CardTitle className="text-base">策略</CardTitle>
             <CardDescription>每条策略给出 多 / 中 / 空 三种判断，转向多或空时推送飞书</CardDescription>
-            <p className="mt-1 text-xs text-muted-foreground">{backtestStatusText(lastRunAt, running, windowLabel(windowDays))}</p>
+            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+              {backtestStatusText(lastRunAt, running, windowLabel(windowDays))}
+              <span title={METRIC_HELP} className="inline-flex cursor-help" aria-label="指标说明">
+                <Info className="h-3 w-3 shrink-0" />
+              </span>
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Select value={String(windowDays)} onValueChange={(v) => setWindowDays(Number(v))} disabled={running}>
@@ -405,6 +410,11 @@ function backtestStatusText(lastRunAt: number | null, running: boolean, windowLb
 // 单独标成告警型，避免和「参数太严/真没触发」的无交易混淆。
 const ALERT_ONLY_KINDS = new Set(["buying_climax"]);
 
+const METRIC_HELP =
+  "胜率 = 盈利交易笔数 / 总交易笔数（一次多头买入→卖出算一笔；只看正负、不看幅度）。\n" +
+  "超额 = 策略收益 − 买入持有收益（正=跑赢「躺平不动」，负=不如躺平）。\n" +
+  "回测为 long-only，不含手续费/滑点/分红；判断策略值不值得做以「超额」为主、胜率为辅。";
+
 function BacktestSummaryBadge({ summary, kind, windowLbl }: { summary: ClientSummary | "loading" | "failed" | undefined; kind: string; windowLbl: string }) {
   if (ALERT_ONLY_KINDS.has(kind)) {
     return (
@@ -434,7 +444,7 @@ function BacktestSummaryBadge({ summary, kind, windowLbl }: { summary: ClientSum
   }
   const winColor = summary.winRate >= 60 ? "text-green-700" : summary.winRate >= 45 ? "text-amber-700" : "text-red-700";
   const excessColor = summary.excessReturn >= 0 ? "text-green-700" : "text-red-700";
-  const tooltip = `回测窗口 ${windowLbl}：策略收益 ${summary.totalReturn.toFixed(1)}%，共 ${summary.numTrades} 次交易`;
+  const tooltip = `回测窗口 ${windowLbl}：策略收益 ${summary.totalReturn.toFixed(1)}%，共 ${summary.numTrades} 次交易\n\n${METRIC_HELP}`;
   return (
     <span className="inline-flex items-center gap-1 text-xs" title={tooltip}>
       <span className={cn("font-medium", winColor)}>胜率 {summary.winRate.toFixed(0)}%</span>
