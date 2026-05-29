@@ -27,6 +27,19 @@ function sma(closes: number[], n: number): number | null {
   return s / n;
 }
 
+// MA50 vs MA200：当前是金叉(50>200)还是死叉，以及近 lookback 根内是否刚发生交叉
+function maCross(closes: number[], lookback = 20): { golden: boolean; recent: boolean } | null {
+  const ma50 = sma(closes, 50);
+  const ma200 = sma(closes, 200);
+  if (ma50 == null || ma200 == null) return null;
+  const golden = ma50 > ma200;
+  const prev = closes.slice(0, Math.max(0, closes.length - lookback));
+  const pm50 = sma(prev, 50);
+  const pm200 = sma(prev, 200);
+  const recent = pm50 != null && pm200 != null ? pm50 > pm200 !== golden : false;
+  return { golden, recent };
+}
+
 function marketTrend(price: number | null, ma50: number | null, ma200: number | null): { label: string; cls: string } {
   if (price == null || ma200 == null) return { label: "数据不足", cls: "bg-slate-100 text-slate-600" };
   if (ma50 != null && price > ma50 && ma50 > ma200) return { label: "多头排列 · 上行", cls: "bg-green-100 text-green-700" };
@@ -85,25 +98,37 @@ export default async function HomePage() {
     /* 行情拉取失败时简报里标注 */
   }
 
-  // 大盘基准（用 watchlist 里已有的 SPY/QQQM，趋势直接读 DB 缓存 K 线算）
-  const benchmarks = (
-    await Promise.all(
-      BENCHMARKS.map(async (b) => {
-        const sym = enabledSymbols.find((s) => s.ticker === b.ticker);
-        if (!sym) return null;
-        const rows = await prisma.candle.findMany({
-          where: { symbolId: sym.id },
-          orderBy: { date: "desc" },
-          take: 220,
-          select: { close: true },
-        });
-        const closes = rows.map((r) => r.close).reverse();
-        const q = quotes.get(b.ticker);
-        const price = q?.price ?? closes.at(-1) ?? null;
-        return { ...b, id: sym.id, price, changePercent: q?.changePercent ?? null, ma50: sma(closes, 50), ma200: sma(closes, 200) };
-      }),
-    )
-  ).filter((x): x is NonNullable<typeof x> => x !== null);
+  // 各标的统计（读 DB 缓存 K 线一次算齐）：MA、12月动量、金叉/死叉。
+  // 大盘基准与"监控池宽度"都基于这份数据，避免重复查询。
+  const symbolStats = await Promise.all(
+    enabledSymbols.map(async (s) => {
+      const rows = await prisma.candle.findMany({
+        where: { symbolId: s.id },
+        orderBy: { date: "desc" },
+        take: 300,
+        select: { close: true },
+      });
+      const closes = rows.map((r) => r.close).reverse();
+      const last = closes.at(-1) ?? null;
+      const roc252 = closes.length >= 253 ? (closes[closes.length - 1] / closes[closes.length - 253] - 1) * 100 : null;
+      return { sym: s, last, ma50: sma(closes, 50), ma200: sma(closes, 200), roc252, cross: maCross(closes, 20) };
+    }),
+  );
+
+  // 大盘基准（SPY/QQQM）
+  const benchmarks = BENCHMARKS.map((b) => {
+    const st = symbolStats.find((x) => x.sym.ticker === b.ticker);
+    if (!st) return null;
+    const q = quotes.get(b.ticker);
+    return { ...b, id: st.sym.id, price: q?.price ?? st.last ?? null, changePercent: q?.changePercent ?? null, ma50: st.ma50, ma200: st.ma200, roc252: st.roc252, cross: st.cross };
+  }).filter((x): x is NonNullable<typeof x> => x !== null);
+
+  // 监控池迷你宽度：多少只站上 MA200 / MA50
+  const w200 = symbolStats.filter((x) => x.ma200 != null && x.last != null);
+  const above200 = w200.filter((x) => (x.last as number) > (x.ma200 as number)).length;
+  const w50 = symbolStats.filter((x) => x.ma50 != null && x.last != null);
+  const above50 = w50.filter((x) => (x.last as number) > (x.ma50 as number)).length;
+  const breadthPct = w200.length > 0 ? (above200 / w200.length) * 100 : null;
 
   const marketOpen = isMarketOpen();
   const levelCount = { long: 0, neutral: 0, short: 0 } as Record<string, number>;
@@ -147,14 +172,34 @@ export default async function HomePage() {
                         </span>
                       ) : null}
                     </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {b.ma50 != null ? `MA50 ${b.ma50.toFixed(2)}` : "MA50 —"} · {b.ma200 != null ? `MA200 ${b.ma200.toFixed(2)}` : "MA200 —"}
-                      {distMa200 != null ? ` · 距 MA200 ${distMa200 >= 0 ? "+" : ""}${distMa200.toFixed(1)}%` : ""}
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                      {b.roc252 != null ? (
+                        <span className={b.roc252 >= 0 ? "text-green-700" : "text-red-700"}>
+                          12月动量 {b.roc252 >= 0 ? "+" : ""}{b.roc252.toFixed(1)}%
+                        </span>
+                      ) : null}
+                      {b.cross ? (
+                        <span className={b.cross.golden ? "text-green-700" : "text-red-700"}>
+                          {b.cross.golden ? "金叉" : "死叉"}{b.cross.recent ? "（近期）🔥" : ""}
+                        </span>
+                      ) : null}
+                      {distMa200 != null ? <span>距 MA200 {distMa200 >= 0 ? "+" : ""}{distMa200.toFixed(1)}%</span> : null}
                     </div>
                   </Link>
                 );
               })}
             </div>
+            {/* 监控池迷你宽度 */}
+            {w200.length > 0 ? (
+              <div className="mt-3 border-t pt-3 text-xs">
+                <span className="text-muted-foreground">监控池宽度（{w200.length} 只）：</span>
+                <span className={breadthPct != null && breadthPct >= 60 ? "text-green-700 font-medium" : breadthPct != null && breadthPct < 40 ? "text-red-700 font-medium" : "font-medium"}>
+                  {above200} 只站上 MA200（{breadthPct != null ? breadthPct.toFixed(0) : "—"}%）
+                </span>
+                <span className="text-muted-foreground"> · {above50} / {w50.length} 站上 MA50</span>
+                <span className="ml-1 text-muted-foreground">{breadthPct != null && breadthPct >= 60 ? "· 普涨偏强" : breadthPct != null && breadthPct < 40 ? "· 普遍走弱" : "· 强弱分化"}</span>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
