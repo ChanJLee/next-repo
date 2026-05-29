@@ -27,18 +27,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // 仅返回时间窗口内的数据（缓存里可能包含更早的历史）
     const since = new Date(Date.now() - days * 86400_000);
     const inRange = candles.filter((c) => c.date >= since);
+    // 按交易日去重：不同数据源给同一天打的时间戳不同（Stooq 用 UTC 零点、
+    // yahoo-chart 用盘中时刻），会在 DB 里留下同一天的多行。图表要求时间唯一且升序，
+    // 这里按日历日折叠并保留最后一条（inRange 已按时间升序 => 最新时间戳胜出）。
+    const byDay = new Map<string, { time: string; open: number; high: number; low: number; close: number; volume: number }>();
+    for (const c of inRange) {
+      const time = c.date.toISOString().slice(0, 10);
+      byDay.set(time, { time, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume });
+    }
     return NextResponse.json({
       ticker: sym.ticker,
       range,
       cached: !force,
-      candles: inRange.map((c) => ({
-        time: c.date.toISOString().slice(0, 10),
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-        volume: c.volume,
-      })),
+      candles: Array.from(byDay.values()),
     });
   } catch (e) {
     return NextResponse.json(

@@ -50,10 +50,25 @@ async function fetchCandlesFromAny(
   throw new Error(`所有数据源都失败: ${errors.join("; ")}`);
 }
 
+/**
+ * 把日期归一到 UTC 零点。各数据源给同一交易日打的时间戳不一致
+ * （Stooq 用 UTC 零点、yahoo-chart 用盘中时刻），不归一会让 @@id([symbolId,date])
+ * 把同一天当成多行，累积重复数据并把图表打挂。
+ */
+function toUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
 async function upsertCandles(symbolId: number, candles: Candle[]): Promise<void> {
   if (candles.length === 0) return;
+  // 同一批里若有同一天的多条，按日归并保留最后一条，避免事务内主键冲突
+  const byDay = new Map<number, Candle>();
+  for (const c of candles) {
+    const day = toUtcDay(c.date);
+    byDay.set(day.getTime(), { ...c, date: day });
+  }
   await prisma.$transaction(
-    candles.map((c) =>
+    Array.from(byDay.values()).map((c) =>
       prisma.candle.upsert({
         where: { symbolId_date: { symbolId, date: c.date } },
         update: { open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume },
