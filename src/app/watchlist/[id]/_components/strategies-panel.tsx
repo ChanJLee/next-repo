@@ -291,16 +291,16 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <CardTitle className="text-base">策略</CardTitle>
             <CardDescription>每条策略给出 多 / 中 / 空 三种判断，转向多或空时推送飞书</CardDescription>
-            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
               {backtestStatusText(lastRunAt, running, windowLabel(windowDays))}
               <MetricHelp />
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={String(windowDays)} onValueChange={(v) => setWindowDays(Number(v))} disabled={running}>
               <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
