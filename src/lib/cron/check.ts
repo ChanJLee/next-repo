@@ -43,11 +43,11 @@ export async function runCheck(force: boolean): Promise<CheckReport> {
     return report;
   }
 
-  for (const sym of symbols) {
+  async function processSymbol(sym: (typeof symbols)[number]): Promise<void> {
     const quote = quoteMap.get(sym.ticker);
     if (!quote) {
       report.errors.push({ ticker: sym.ticker, message: "未拿到报价" });
-      continue;
+      return;
     }
 
     const maxLookback = Math.max(
@@ -66,7 +66,7 @@ export async function runCheck(force: boolean): Promise<CheckReport> {
       candles = await getCandlesCached({ symbolId: sym.id, ticker: sym.ticker, days: maxLookback * 2 + 30 });
     } catch (e) {
       report.errors.push({ ticker: sym.ticker, message: `K线拉取失败: ${e instanceof Error ? e.message : String(e)}` });
-      continue;
+      return;
     }
 
     for (const strategy of sym.strategies) {
@@ -119,6 +119,16 @@ export async function runCheck(force: boolean): Promise<CheckReport> {
       });
     }
   }
+
+  // 并发处理各标的，压缩外部行情/K线请求的串行等待；并发上限避免打爆数据源与 DB 连接池。
+  const CONCURRENCY = 5;
+  let cursor = 0;
+  async function worker(): Promise<void> {
+    while (cursor < symbols.length) {
+      await processSymbol(symbols[cursor++]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, symbols.length) }, () => worker()));
 
   return report;
 }
