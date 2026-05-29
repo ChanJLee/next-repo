@@ -18,7 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
-import { LEVEL_COLOR } from "@/lib/strategies/types";
+import { LEVEL_COLOR, type Level } from "@/lib/strategies/types";
+import { backtest } from "@/lib/strategies/backtest";
 
 interface Candle {
   time: string;
@@ -177,6 +178,16 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const clean = useMemo(() => sanitizeCandles(candles), [candles]);
 
+  // 在可见区间上跑一遍回测，得到逐笔交易（用于在图上标注盈亏）。
+  // 注意：这是「本图区间」的统计，和左侧策略徽章的 2/5 年窗口口径不同。
+  const bt = useMemo(() => {
+    if (levels.length === 0 || clean.length === 0) return null;
+    const levelMap = new Map(levels.map((l) => [l.time, l.level]));
+    const cs = clean.map((c) => ({ date: new Date(`${c.time}T00:00:00Z`), open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume }));
+    const lv: Level[] = clean.map((c) => (levelMap.get(c.time) as Level) ?? "neutral");
+    return backtest(cs, lv);
+  }, [clean, levels]);
+
   useEffect(() => {
     if (!containerRef.current) return;
     const chart = createChart(containerRef.current, {
@@ -267,25 +278,29 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
         return { time: c.time as Time, value: 1, color };
       }),
     );
-    // 在 level 转向（变成 long 或 short）的当根 K 线上画箭头
+    // 逐笔交易标注：买入↑ / 卖出↓，按该笔盈亏着色（赢绿亏红），卖出标出收益%。
     const markers: SeriesMarker<Time>[] = [];
-    let prev = "neutral";
-    for (const c of clean) {
-      const lv = levelMap.get(c.time) ?? "neutral";
-      if (lv !== prev) {
-        if (lv === "long") {
-          markers.push({ time: c.time as Time, position: "belowBar", shape: "arrowUp", color: LEVEL_COLOR.long, text: "多" });
-        } else if (lv === "short") {
-          markers.push({ time: c.time as Time, position: "aboveBar", shape: "arrowDown", color: LEVEL_COLOR.short, text: "空" });
-        }
-      }
-      prev = lv;
+    for (const t of bt?.trades ?? []) {
+      const win = t.returnPct >= 0;
+      const color = win ? UP_COLOR : DOWN_COLOR;
+      markers.push({ time: t.entryDate as Time, position: "belowBar", shape: "arrowUp", color, text: "买" });
+      markers.push({ time: t.exitDate as Time, position: "aboveBar", shape: "arrowDown", color, text: `${t.returnPct >= 0 ? "+" : ""}${t.returnPct.toFixed(1)}%` });
     }
+    // markers 需按时间升序
+    markers.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
     markersRef.current.setMarkers(markers);
-  }, [clean, levels]);
+  }, [clean, levels, bt]);
 
   return (
     <div className="relative">
+      {bt && bt.numTrades > 0 ? (
+        <div className="absolute left-2 top-2 z-10 rounded bg-background/80 px-2 py-1 text-xs shadow-sm backdrop-blur">
+          <span className="text-muted-foreground">本区间</span> {bt.numTrades} 笔 ·{" "}
+          <span className="font-medium">胜率 {bt.winRate.toFixed(0)}%</span> ·{" "}
+          <span className={bt.excessReturn >= 0 ? "text-green-600" : "text-red-600"}>超额 {bt.excessReturn >= 0 ? "+" : ""}{bt.excessReturn.toFixed(1)}%</span>
+          <span className="ml-1 text-muted-foreground">（按当前图表区间，口径与左侧回测窗口不同）</span>
+        </div>
+      ) : null}
       <div ref={containerRef} className="h-[460px] w-full" />
       {loading ? (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">加载中…</div>
