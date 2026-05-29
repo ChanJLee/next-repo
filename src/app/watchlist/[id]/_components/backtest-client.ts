@@ -17,11 +17,21 @@ export interface ClientSummary {
   numTrades: number;
 }
 
-// 回测窗口 = 2 年（与原服务端摘要一致）
-export const BACKTEST_WINDOW_DAYS = 730;
+// 可选回测窗口
+export const WINDOW_OPTIONS: { days: number; label: string }[] = [
+  { days: 365, label: "1 年" },
+  { days: 730, label: "2 年" },
+  { days: 1825, label: "5 年" },
+];
+export const DEFAULT_WINDOW_DAYS = 730;
+
+export function windowLabel(days: number): string {
+  return WINDOW_OPTIONS.find((w) => w.days === days)?.label ?? `${Math.round(days / 365)} 年`;
+}
 
 export interface BacktestCache {
   at: number; // 回测发生的时间戳（ms）
+  windowDays: number; // 该次回测使用的窗口
   items: Record<number, { sig: string; summary: ClientSummary }>;
 }
 
@@ -40,6 +50,7 @@ export function loadCache(symbolId: number): BacktestCache | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (typeof parsed?.at !== "number" || typeof parsed?.items !== "object") return null;
+    if (typeof parsed?.windowDays !== "number") parsed.windowDays = DEFAULT_WINDOW_DAYS; // 兼容旧缓存
     return parsed as BacktestCache;
   } catch {
     return null;
@@ -80,9 +91,10 @@ interface RawCandle {
 export async function runAllBacktests(
   symbolId: number,
   strategies: StrategyVM[],
+  windowDays: number = DEFAULT_WINDOW_DAYS,
 ): Promise<{ cache: BacktestCache; failed: number[] }> {
   const maxWarmup = strategies.reduce((m, s) => Math.max(m, warmupFor(s)), 0);
-  const fetchDays = Math.min(BACKTEST_WINDOW_DAYS + maxWarmup * 2, 3650);
+  const fetchDays = Math.min(windowDays + maxWarmup * 2, 3650);
 
   const res = await fetch(`/api/symbols/${symbolId}/candles?days=${fetchDays}`);
   if (!res.ok) {
@@ -107,7 +119,7 @@ export async function runAllBacktests(
   }
   const candles: Candle[] = Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const since = new Date(Date.now() - BACKTEST_WINDOW_DAYS * 86400_000);
+  const since = new Date(Date.now() - windowDays * 86400_000);
   const start = candles.findIndex((c) => c.date >= since);
 
   const items: BacktestCache["items"] = {};
@@ -144,7 +156,7 @@ export async function runAllBacktests(
     }
   }
 
-  const cache: BacktestCache = { at: Date.now(), items };
+  const cache: BacktestCache = { at: Date.now(), windowDays, items };
   saveCache(symbolId, cache);
   return { cache, failed };
 }

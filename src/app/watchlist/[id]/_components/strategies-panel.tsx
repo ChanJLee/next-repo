@@ -17,8 +17,11 @@ import {
   runAllBacktests,
   loadCache,
   strategySig,
-  BACKTEST_WINDOW_DAYS,
+  windowLabel,
+  WINDOW_OPTIONS,
+  DEFAULT_WINDOW_DAYS,
   type ClientSummary,
+  type BacktestCache,
 } from "./backtest-client";
 
 export interface StrategyVM {
@@ -113,10 +116,13 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
   const [showPresets, setShowPresets] = useState(false);
   const [busyPresetName, setBusyPresetName] = useState<string | null>(null);
   const [bulkAdding, setBulkAdding] = useState(false);
-  // 回测结果：本地计算、点按钮触发，结果连同时间戳缓存到 localStorage。
+  // 回测结果：本地计算、点按钮触发，结果连同时间戳+窗口缓存到 localStorage。
   const [summaries, setSummaries] = useState<Record<number, ClientSummary | "loading" | "failed">>({});
-  const [lastRunAt, setLastRunAt] = useState<number | null>(null);
+  const [cache, setCache] = useState<BacktestCache | null>(null);
+  const [windowDays, setWindowDays] = useState<number>(DEFAULT_WINDOW_DAYS);
   const [running, setRunning] = useState(false);
+  // 缓存结果仅在「窗口一致」时才算数；切换窗口后需重测。
+  const lastRunAt = cache && cache.windowDays === windowDays ? cache.at : null;
 
   const existingNames = useMemo(() => new Set(strategies.map((s) => s.name)), [strategies]);
   const missingPresetCount = STRATEGY_PRESETS.filter((p) => !existingNames.has(p.name)).length;
@@ -205,21 +211,28 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
     router.refresh();
   }
 
-  // 进页面只读本地缓存（不自动回测）：只采用「签名仍匹配」的结果，
-  // 参数被改过的策略视为未回测，留给用户决定是否重测。
+  // 进页面只读一次本地缓存（不自动回测），并把窗口对齐到上次回测用的窗口。
   useEffect(() => {
-    const cache = loadCache(symbolId);
-    if (!cache) return;
-    const map: Record<number, ClientSummary> = {};
-    for (const s of strategies) {
-      const hit = cache.items[s.id];
-      if (hit && hit.sig === strategySig(s)) map[s.id] = hit.summary;
-    }
-    setSummaries(map);
-    setLastRunAt(cache.at);
-    // 只在挂载时读一次缓存
+    const c = loadCache(symbolId);
+    if (!c) return;
+    setCache(c);
+    setWindowDays(c.windowDays);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 由缓存派生展示用的摘要：仅当缓存窗口 == 当前窗口、且策略签名未变时采用；
+  // 否则视为「未回测」。回测进行中不覆盖（保留 loading 态）。
+  useEffect(() => {
+    if (running) return;
+    const map: Record<number, ClientSummary> = {};
+    if (cache && cache.windowDays === windowDays) {
+      for (const s of strategies) {
+        const hit = cache.items[s.id];
+        if (hit && hit.sig === strategySig(s)) map[s.id] = hit.summary;
+      }
+    }
+    setSummaries(map);
+  }, [cache, windowDays, strategies, running]);
 
   async function runBacktests() {
     if (running || strategies.length === 0) return;
@@ -230,15 +243,15 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
       return next;
     });
     try {
-      const { cache, failed } = await runAllBacktests(symbolId, strategies);
+      const { cache: newCache, failed } = await runAllBacktests(symbolId, strategies, windowDays);
+      setCache(newCache);
       const map: Record<number, ClientSummary | "failed"> = {};
       for (const s of strategies) {
-        const hit = cache.items[s.id];
+        const hit = newCache.items[s.id];
         map[s.id] = hit ? hit.summary : "failed";
       }
       setSummaries(map);
-      setLastRunAt(cache.at);
-      if (failed.length === 0) toast.success(`已回测 ${strategies.length} 条策略`);
+      if (failed.length === 0) toast.success(`已回测 ${strategies.length} 条策略（${windowLabel(windowDays)}）`);
       else toast.warning(`${strategies.length - failed.length} 条成功，${failed.length} 条失败`);
     } catch (e) {
       // 拉数据失败：清掉 loading，提示
@@ -275,9 +288,15 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
           <div>
             <CardTitle className="text-base">策略</CardTitle>
             <CardDescription>每条策略给出 多 / 中 / 空 三种判断，转向多或空时推送飞书</CardDescription>
-            <p className="mt-1 text-xs text-muted-foreground">{backtestStatusText(lastRunAt, running)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{backtestStatusText(lastRunAt, running, windowLabel(windowDays))}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Select value={String(windowDays)} onValueChange={(v) => setWindowDays(Number(v))} disabled={running}>
+              <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {WINDOW_OPTIONS.map((w) => (<SelectItem key={w.days} value={String(w.days)}>{w.label}</SelectItem>))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" size="sm" disabled={running || strategies.length === 0} onClick={runBacktests}>
               <Activity className={cn("h-4 w-4", running && "animate-pulse")} /> {running ? "回测中…" : "回测全部"}
             </Button>
@@ -348,7 +367,7 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">{s.name}</span>
                         <LevelBadge level={s.currentLevel} />
-                        <BacktestSummaryBadge summary={summary} kind={s.kind} />
+                        <BacktestSummaryBadge summary={summary} kind={s.kind} windowLbl={windowLabel(windowDays)} />
                         <span className="text-xs text-muted-foreground">· {kindLabel}</span>
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -370,23 +389,23 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
   );
 }
 
-function backtestStatusText(lastRunAt: number | null, running: boolean): string {
-  if (running) return "回测中…（本地计算）";
-  if (!lastRunAt) return "尚未回测，点右上「回测全部」按当前参数本地回测";
+function backtestStatusText(lastRunAt: number | null, running: boolean, windowLbl: string): string {
+  if (running) return `回测中…（本地计算，${windowLbl}窗口）`;
+  if (!lastRunAt) return `尚未按「${windowLbl}」回测，点右上「回测全部」本地回测`;
   const d = new Date(lastRunAt);
   const ageMs = Date.now() - lastRunAt;
   const ageDay = Math.floor(ageMs / 86400_000);
   const ageHr = Math.floor(ageMs / 3600_000);
   const rel = ageDay >= 1 ? `${ageDay} 天前` : ageHr >= 1 ? `${ageHr} 小时前` : "刚刚";
   const stale = ageDay >= 1 ? "，可能已过期，建议重新回测" : "";
-  return `回测于 ${d.toLocaleString("zh-CN", { hour12: false })}（${rel}${stale}）`;
+  return `回测于 ${d.toLocaleString("zh-CN", { hour12: false })}（${windowLbl}窗口，${rel}${stale}）`;
 }
 
 // 只发单边「空」信号的策略：long-only 回测必然 0 笔交易，胜率/超额对它无意义，
 // 单独标成告警型，避免和「参数太严/真没触发」的无交易混淆。
 const ALERT_ONLY_KINDS = new Set(["buying_climax"]);
 
-function BacktestSummaryBadge({ summary, kind }: { summary: ClientSummary | "loading" | "failed" | undefined; kind: string }) {
+function BacktestSummaryBadge({ summary, kind, windowLbl }: { summary: ClientSummary | "loading" | "failed" | undefined; kind: string; windowLbl: string }) {
   if (ALERT_ONLY_KINDS.has(kind)) {
     return (
       <span
@@ -408,14 +427,14 @@ function BacktestSummaryBadge({ summary, kind }: { summary: ClientSummary | "loa
   }
   if (summary.numTrades === 0) {
     return (
-      <span className="text-xs text-muted-foreground" title={`近 ${BACKTEST_WINDOW_DAYS} 天无交易信号`}>
+      <span className="text-xs text-muted-foreground" title={`${windowLbl}窗口内无交易信号`}>
         无交易
       </span>
     );
   }
   const winColor = summary.winRate >= 60 ? "text-green-700" : summary.winRate >= 45 ? "text-amber-700" : "text-red-700";
   const excessColor = summary.excessReturn >= 0 ? "text-green-700" : "text-red-700";
-  const tooltip = `回测窗口 2 年：策略收益 ${summary.totalReturn.toFixed(1)}%，共 ${summary.numTrades} 次交易`;
+  const tooltip = `回测窗口 ${windowLbl}：策略收益 ${summary.totalReturn.toFixed(1)}%，共 ${summary.numTrades} 次交易`;
   return (
     <span className="inline-flex items-center gap-1 text-xs" title={tooltip}>
       <span className={cn("font-medium", winColor)}>胜率 {summary.winRate.toFixed(0)}%</span>
