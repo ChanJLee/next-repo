@@ -17,6 +17,7 @@ export const LEVEL_COLOR: Record<Level, string> = {
 
 export const StrategyKindEnum = z.enum([
   "ma_trend",       // 价格 vs MA(period)：上方=多，下方=空，附近 tolerance% 视为中
+  "ma_cross",       // 双均线交叉：MA(maFast) 上穿 MA(maSlow)=多（金叉），下穿=空（死叉）
   "rsi_extreme",    // RSI 极值：超卖=多（加仓机会），超买=空
   "macd",           // MACD 信号线穿越：MACD > Signal = 多
   "roc_momentum",   // N 日动量：上下阈值划分三态
@@ -33,6 +34,8 @@ export const StrategyParamsSchema = z
     period: z.number().int().positive().optional(),
     tolerance: z.number().min(0).max(50).optional(),
     maType: z.enum(["sma", "ema"]).optional(),
+    maFast: z.number().int().positive().optional(), // 双均线交叉的快线周期
+    maSlow: z.number().int().positive().optional(), // 双均线交叉的慢线周期
     longBelow: z.number().optional(),
     shortAbove: z.number().optional(),
     exitMid: z.number().min(1).max(99).optional(), // RSI 回到该中位值才退出持仓

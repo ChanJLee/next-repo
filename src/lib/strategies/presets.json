@@ -7,6 +7,13 @@
     "description": "价格站在 MA200 上方=多，下方=空。最经典的趋势 regime filter。"
   },
   {
+    "name": "MA 金叉死叉 (50/200)",
+    "kind": "ma_cross",
+    "params": { "maFast": 50, "maSlow": 200, "maType": "sma" },
+    "cooldownSec": 14400,
+    "description": "MA50 上穿 MA200=多（金叉），下穿=空（死叉）。中期趋势切换信号。"
+  },
+  {
     "name": "MACD",
     "kind": "macd",
     "params": { "fast": 12, "slow": 26, "signal": 9, "histTolerance": 0 },
@@ -30,9 +37,16 @@
   {
     "name": "RSI 超买超卖",
     "kind": "rsi_extreme",
+    "params": { "period": 14, "longBelow": 30, "shortAbove": 70, "exitMid": 30, "trendPeriod": 0 },
+    "cooldownSec": 7200,
+    "description": "经典：RSI < 30 转多、回到 30 即出；无趋势过滤。胜率不稳，仅作对照。"
+  },
+  {
+    "name": "RSI 趋势回归",
+    "kind": "rsi_extreme",
     "params": { "period": 14, "longBelow": 30, "shortAbove": 70, "exitMid": 50, "trendPeriod": 200 },
     "cooldownSec": 7200,
-    "description": "上涨趋势中 RSI < 30 转多，持有到 RSI 回 50 退出（趋势过滤 + 持有到中位）。空头镜像。"
+    "description": "改进版：仅在上涨趋势（价 > MA200）中接 RSI 超卖转多，持有到 RSI 回 50 才退出。胜率与稳定性更好，推荐。"
   },
   {
     "name": "布林带均值回归",
