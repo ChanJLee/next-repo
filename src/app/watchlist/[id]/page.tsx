@@ -9,6 +9,7 @@ import { LEVEL_LABEL } from "@/lib/strategies/types";
 import { SymbolChartPanel } from "./_components/chart-panel";
 import { BackfillButton } from "./_components/backfill-button";
 import { StrategiesPanel } from "./_components/strategies-panel";
+import { MarketModelPanel } from "./_components/market-model-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function SymbolDetailPage({ params }: { params: { id: strin
   });
   if (!sym) notFound();
 
-  const strategiesForChart = sym.strategies.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, kind: s.kind }));
+  const enabledStrategies = sym.strategies.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, kind: s.kind, params: s.params }));
 
   return (
     <div className="space-y-6">
@@ -50,7 +51,9 @@ export default async function SymbolDetailPage({ params }: { params: { id: strin
         <BackfillButton symbolId={sym.id} />
       </div>
 
-      <SymbolChartPanel symbolId={sym.id} ticker={sym.ticker} strategies={strategiesForChart} />
+      <SymbolChartPanel symbolId={sym.id} ticker={sym.ticker} strategies={enabledStrategies} />
+
+      <MarketModelPanel symbolId={sym.id} strategies={enabledStrategies} />
 
       <StrategiesPanel
         symbolId={sym.id}
