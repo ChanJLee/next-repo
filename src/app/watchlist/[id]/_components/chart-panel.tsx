@@ -12,11 +12,12 @@ import {
 } from "lightweight-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
-import { CATEGORY_LABEL, type StrategyCategory } from "@/lib/strategies/types";
+import { CATEGORY_LABEL, STRATEGY_CATEGORY, type StrategyCategory, type StrategyKind } from "@/lib/strategies/types";
 import type { Candle as ModelCandle } from "@/lib/data/yahoo";
-import { evalStrategies, categoryLanes, type ModelStrategy, type CategoryLane } from "./market-model";
+import { evalStrategies, type ModelStrategy } from "./market-model";
 
 interface Candle {
   time: string;
@@ -26,6 +27,9 @@ interface Candle {
   close: number;
   volume: number;
 }
+
+interface LaneItem { time: string; level: string }
+interface Lane { category: StrategyCategory; name: string; items: LaneItem[] }
 
 type ChartRange = "1w" | "1m" | "3m" | "1y" | "2y" | "5y";
 const RANGES: { value: ChartRange; label: string }[] = [
@@ -41,7 +45,6 @@ const RANGE_DAYS: Record<ChartRange, number> = { "1w": 14, "1m": 35, "3m": 100, 
 const UP_COLOR = "#16a34a";
 const DOWN_COLOR = "#dc2626";
 
-// 三条共识带的纵向位置（占图表高度比例）
 const LANE_ORDER: StrategyCategory[] = ["trend", "reversion", "pattern"];
 const LANE_MARGINS: Record<StrategyCategory, { top: number; bottom: number }> = {
   trend: { top: 0.74, bottom: 0.18 },
@@ -58,12 +61,10 @@ function warmupFor(s: ModelStrategy): number {
   }
 }
 
-function laneColor(long: number, short: number, total: number): string {
-  const net = long - short;
-  if (total === 0 || net === 0) return "#cbd5e1"; // 分歧/中性 = 灰
-  const mag = Math.min(1, Math.abs(net) / total);
-  const alpha = Math.round((0.4 + 0.6 * mag) * 255).toString(16).padStart(2, "0");
-  return (net > 0 ? UP_COLOR : DOWN_COLOR) + alpha;
+function levelColor(level: string | undefined): string {
+  if (level === "long") return UP_COLOR;
+  if (level === "short") return DOWN_COLOR;
+  return "#cbd5e1";
 }
 
 function sanitizeCandles(candles: Candle[]): Candle[] {
@@ -87,10 +88,25 @@ async function readJson(res: Response): Promise<any> {
 export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: number; ticker: string; strategies: ModelStrategy[] }) {
   const [range, setRange] = useState<ChartRange>("1m");
   const [candles, setCandles] = useState<Candle[]>([]);
-  const [lanes, setLanes] = useState<CategoryLane[]>([]);
+  const [laneSource, setLaneSource] = useState<{ id: number; name: string; category: StrategyCategory; items: LaneItem[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+
+  const grouped = useMemo(() => {
+    const g: Record<StrategyCategory, ModelStrategy[]> = { trend: [], reversion: [], pattern: [] };
+    for (const s of strategies) {
+      const c = STRATEGY_CATEGORY[s.kind as StrategyKind];
+      if (c) g[c].push(s);
+    }
+    return g;
+  }, [strategies]);
+
+  // 每个分类默认选第一条策略
+  const [selected, setSelected] = useState<Record<StrategyCategory, number | null>>(() => {
+    const pick = (cat: StrategyCategory) => strategies.find((s) => STRATEGY_CATEGORY[s.kind as StrategyKind] === cat)?.id ?? null;
+    return { trend: pick("trend"), reversion: pick("reversion"), pattern: pick("pattern") };
+  });
 
   useEffect(() => {
     let aborted = false;
@@ -104,8 +120,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
       .then(async (res) => {
         const json = await readJson(res);
         if (aborted) return;
-        if (!res.ok) { setError(json.error ?? `HTTP ${res.status}`); setCandles([]); setLanes([]); return; }
-        // 全量（含预热）算级别，再切到展示窗口
+        if (!res.ok) { setError(json.error ?? `HTTP ${res.status}`); setCandles([]); setLaneSource([]); return; }
         const byDay = new Map<string, ModelCandle>();
         for (const c of json.candles ?? []) {
           if (![c.open, c.high, c.low, c.close].every((v: unknown) => typeof v === "number" && Number.isFinite(v))) continue;
@@ -116,15 +131,32 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         const sinceTs = Date.now() - days * 86400_000;
         const idx = model.findIndex((c) => c.date.getTime() >= sinceTs);
         const start = idx < 0 ? 0 : idx;
-        setLanes(categoryLanes(model, evals, start));
-        setCandles(
-          model.slice(start).map((c) => ({ time: c.date.toISOString().slice(0, 10), open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume })),
+        const disp = model.slice(start);
+        setCandles(disp.map((c) => ({ time: c.date.toISOString().slice(0, 10), open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume })));
+        setLaneSource(
+          evals.map((e) => ({
+            id: e.id,
+            name: e.name,
+            category: e.category,
+            items: disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), level: e.levels[start + k] })),
+          })),
         );
       })
       .catch((e) => { if (!aborted) setError(e instanceof Error ? e.message : "网络错误"); })
       .finally(() => { if (!aborted) setLoading(false); });
     return () => { aborted = true; };
   }, [symbolId, range, refreshTick, strategies]);
+
+  const lanes: Lane[] = useMemo(() => {
+    const out: Lane[] = [];
+    for (const cat of LANE_ORDER) {
+      const id = selected[cat];
+      if (id == null) continue;
+      const src = laneSource.find((s) => s.id === id);
+      if (src) out.push({ category: cat, name: src.name, items: src.items });
+    }
+    return out;
+  }, [selected, laneSource]);
 
   const latest = candles.at(-1);
   const prev = candles.at(-2);
@@ -157,16 +189,39 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         </div>
       </CardHeader>
       <CardContent>
+        {/* 三个分类下拉：各选一条策略，在图底显示其多空 */}
+        <div className="mb-2 flex flex-wrap gap-2">
+          {LANE_ORDER.map((cat) => {
+            const list = grouped[cat];
+            if (list.length === 0) return null;
+            const val = selected[cat] != null ? String(selected[cat]) : "none";
+            return (
+              <div key={cat} className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground">{CATEGORY_LABEL[cat]}</span>
+                <Select value={val} onValueChange={(v) => setSelected((p) => ({ ...p, [cat]: v === "none" ? null : Number(v) }))}>
+                  <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">不显示</SelectItem>
+                    {list.map((s) => (<SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
+        </div>
+
         <ChartCanvas candles={candles} lanes={lanes} loading={loading} error={error} />
+
         {lanes.length > 0 ? (
           <div className="mt-2 space-y-1 text-xs text-muted-foreground">
             <div className="flex flex-wrap items-center gap-3">
-              {LANE_ORDER.filter((cat) => lanes.some((l) => l.category === cat)).map((cat) => {
-                const l = lanes.find((x) => x.category === cat)!;
-                return <span key={cat} className="font-medium text-foreground">{CATEGORY_LABEL[cat]}（{l.count}）</span>;
-              })}
+              {lanes.map((l) => (
+                <span key={l.category}>
+                  <span className="font-medium text-foreground">{CATEGORY_LABEL[l.category]}</span>：{l.name}
+                </span>
+              ))}
             </div>
-            <div>底部三条带 = 各分组共识：<span className="text-green-600">绿=偏多</span> / <span className="text-red-600">红=偏空</span> / 灰=分歧或中性，颜色越深一致性越强（从上到下依次为上面列出的分组）。</div>
+            <div>底部各带 = 所选策略的多空：<span className="text-green-600">绿=多</span> / <span className="text-red-600">红=空</span> / 灰=中性（从上到下依次为上面列出的策略）。绿带对着涨、红带对着跌 = 拟合好。</div>
           </div>
         ) : null}
       </CardContent>
@@ -174,7 +229,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
   );
 }
 
-function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; lanes: CategoryLane[]; loading: boolean; error: string | null }) {
+function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; lanes: Lane[]; loading: boolean; error: string | null }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -203,7 +258,6 @@ function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; la
     volumeSeriesRef.current = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume", color: "#94a3b8" });
     chart.priceScale("volume").applyOptions({ scaleMargins: { top: 0.58, bottom: 0.30 } });
 
-    // 三条分组共识带
     for (const cat of LANE_ORDER) {
       const s = chart.addSeries(HistogramSeries, { priceScaleId: `lane_${cat}`, lastValueVisible: false, priceLineVisible: false });
       chart.priceScale(`lane_${cat}`).applyOptions({ scaleMargins: LANE_MARGINS[cat], visible: false });
@@ -239,13 +293,8 @@ function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; la
       if (!series) continue;
       const lane = lanes.find((l) => l.category === cat);
       if (!lane) { series.setData([]); continue; }
-      const m = new Map(lane.items.map((it) => [it.time, it]));
-      series.setData(
-        clean.map((c) => {
-          const it = m.get(c.time);
-          return { time: c.time as Time, value: 1, color: laneColor(it?.long ?? 0, it?.short ?? 0, lane.count) };
-        }),
-      );
+      const m = new Map(lane.items.map((it) => [it.time, it.level]));
+      series.setData(clean.map((c) => ({ time: c.time as Time, value: 1, color: levelColor(m.get(c.time)) })));
     }
   }, [clean, lanes]);
 

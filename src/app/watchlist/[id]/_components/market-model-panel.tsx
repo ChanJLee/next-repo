@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { CATEGORY_LABEL } from "@/lib/strategies/types";
 import type { Candle } from "@/lib/data/yahoo";
-import { evalStrategies, combinedProbability, type ModelStrategy, type CombinedRead } from "./market-model";
+import { evalStrategies, combinedProbability, marketState, type ModelStrategy, type CombinedRead, type MarketState } from "./market-model";
 
 // 估准确率要长历史，5 年（已回填）
 const MODEL_DAYS = 1825;
@@ -18,8 +18,15 @@ function readLabel(p: number): { text: string; cls: string } {
 
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
 
+const REGIME_CLS: Record<string, string> = {
+  trend: "bg-blue-100 text-blue-700",
+  reversion: "bg-purple-100 text-purple-700",
+  random: "bg-slate-100 text-slate-600",
+};
+
 export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; strategies: ModelStrategy[] }) {
   const [read, setRead] = useState<CombinedRead | null>(null);
+  const [regime, setRegime] = useState<MarketState | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "empty" | "failed">("loading");
 
   useEffect(() => {
@@ -38,8 +45,10 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
         }
         const candles = Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
         if (candles.length === 0) { setState("failed"); return; }
+        const st = marketState(candles.map((c) => c.close));
         const evals = evalStrategies(candles, strategies);
-        setRead(combinedProbability(evals));
+        setRegime(st);
+        setRead(combinedProbability(evals, st.weights));
         setState("ready");
       })
       .catch(() => { if (!aborted) setState("failed"); });
@@ -66,6 +75,18 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
 
         {state === "ready" && read ? (
           <>
+            {/* 市场状态（Hurst） */}
+            {regime ? (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted-foreground">市场状态</span>
+                <span className={cn("rounded px-2 py-0.5", REGIME_CLS[regime.regime])}>{regime.label}</span>
+                {regime.hurst != null ? <span className="text-muted-foreground">Hurst {regime.hurst.toFixed(2)}</span> : null}
+                <span className="text-muted-foreground">
+                  {regime.regime === "trend" ? "· 放大趋势组权重" : regime.regime === "reversion" ? "· 放大均值回归组权重" : "· 整体降权"}
+                </span>
+              </div>
+            ) : null}
+
             {/* 概率条：左空右多 */}
             <div className="space-y-1">
               <div className="relative h-3 w-full overflow-hidden rounded bg-gradient-to-r from-red-200 via-slate-200 to-green-200">
@@ -81,7 +102,10 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
                 const lean = c.evidence > 0.05 ? "text-green-700" : c.evidence < -0.05 ? "text-red-700" : "text-muted-foreground";
                 return (
                   <div key={c.category} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="text-muted-foreground">{CATEGORY_LABEL[c.category]}（{c.total}）</span>
+                    <span className="text-muted-foreground">
+                      {CATEGORY_LABEL[c.category]}（{c.total}）
+                      {c.weight !== 1 ? <span className="ml-1 text-[10px]">×{c.weight.toFixed(1)}</span> : null}
+                    </span>
                     <span className="flex items-center gap-2">
                       <span className="text-muted-foreground">看多 {c.longN} · 看空 {c.shortN}</span>
                       <span className={cn("font-medium", lean)}>{catP}%</span>

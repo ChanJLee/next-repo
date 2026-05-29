@@ -80,9 +80,77 @@ const clamp = (p: number) => Math.min(0.99, Math.max(0.01, p));
 const logit = (p: number) => Math.log(p / (1 - p));
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
 
+/**
+ * Hurst 指数（R/S 重标极差法，基于近窗口的对数收益）：
+ *   H>0.5 趋势性（有惯性）、H≈0.5 随机游走、H<0.5 均值回归（反持续）。
+ * 用它判断当前是"趋势态/震荡态/随机态"，从而动态调整各分类策略的权重。
+ */
+export function hurstExponent(closes: number[]): number | null {
+  const WINDOW = 256;
+  if (closes.length < 80) return null;
+  const tail = closes.slice(-WINDOW);
+  const r: number[] = [];
+  for (let i = 1; i < tail.length; i++) {
+    if (tail[i] > 0 && tail[i - 1] > 0) r.push(Math.log(tail[i] / tail[i - 1]));
+  }
+  const n = r.length;
+  if (n < 64) return null;
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (let size = 8; size <= Math.floor(n / 2); size *= 2) {
+    const chunks = Math.floor(n / size);
+    let rsSum = 0;
+    let cnt = 0;
+    for (let c = 0; c < chunks; c++) {
+      const chunk = r.slice(c * size, (c + 1) * size);
+      const mean = chunk.reduce((a, b) => a + b, 0) / size;
+      let cum = 0, min = Infinity, max = -Infinity, sq = 0;
+      for (const v of chunk) {
+        cum += v - mean;
+        if (cum < min) min = cum;
+        if (cum > max) max = cum;
+        sq += (v - mean) ** 2;
+      }
+      const R = max - min;
+      const S = Math.sqrt(sq / size);
+      if (S > 0 && R > 0) { rsSum += R / S; cnt++; }
+    }
+    if (cnt > 0) { xs.push(Math.log(size)); ys.push(Math.log(rsSum / cnt)); }
+  }
+  if (xs.length < 3) return null;
+  const m = xs.length;
+  const sx = xs.reduce((a, b) => a + b, 0);
+  const sy = ys.reduce((a, b) => a + b, 0);
+  const sxx = xs.reduce((a, b) => a + b * b, 0);
+  let sxy = 0;
+  for (let i = 0; i < m; i++) sxy += xs[i] * ys[i];
+  const denom = m * sxx - sx * sx;
+  if (denom === 0) return null;
+  return (m * sxy - sx * sy) / denom;
+}
+
+export type MarketRegime = "trend" | "reversion" | "random";
+
+export interface MarketState {
+  hurst: number | null;
+  regime: MarketRegime;
+  label: string;
+  weights: Record<StrategyCategory, number>;
+}
+
+/** 由 Hurst 判定市场状态，并给出各分类的动态权重。 */
+export function marketState(closes: number[]): MarketState {
+  const h = hurstExponent(closes);
+  if (h == null) return { hurst: null, regime: "random", label: "数据不足", weights: { trend: 1, reversion: 1, pattern: 1 } };
+  if (h >= 0.55) return { hurst: h, regime: "trend", label: "趋势态", weights: { trend: 1.4, reversion: 0.6, pattern: 1 } };
+  if (h <= 0.45) return { hurst: h, regime: "reversion", label: "均值回归 / 震荡态", weights: { trend: 0.6, reversion: 1.4, pattern: 1 } };
+  return { hurst: h, regime: "random", label: "随机态", weights: { trend: 0.8, reversion: 0.8, pattern: 0.8 } };
+}
+
 export interface CategoryRead {
   category: StrategyCategory;
   evidence: number; // 组内平均 log-odds（>0 偏多，<0 偏空）
+  weight: number; // 该分类的动态权重（由市场状态决定）
   longN: number; // 当前看多的策略数
   shortN: number; // 当前看空的策略数
   total: number;
@@ -94,7 +162,10 @@ export interface CombinedRead {
   byCategory: CategoryRead[];
 }
 
-export function combinedProbability(evals: StratEval[]): CombinedRead {
+export function combinedProbability(
+  evals: StratEval[],
+  weights: Record<StrategyCategory, number> = { trend: 1, reversion: 1, pattern: 1 },
+): CombinedRead {
   let total = 0;
   const byCategory: CategoryRead[] = [];
   for (const cat of CATS) {
@@ -106,8 +177,9 @@ export function combinedProbability(evals: StratEval[]): CombinedRead {
       else if (m.current === "short") { sum += -logit(clamp(m.accShort)); n++; shortN++; }
     }
     const evidence = n > 0 ? sum / n : 0; // 组内平均（降相关）
-    byCategory.push({ category: cat, evidence, longN, shortN, total: members.length });
-    total += evidence; // 跨分类相加
+    const w = weights[cat] ?? 1;
+    byCategory.push({ category: cat, evidence, weight: w, longN, shortN, total: members.length });
+    total += w * evidence; // 按市场状态加权后跨分类相加
   }
   return { pUp: sigmoid(total), logodds: total, byCategory };
 }
