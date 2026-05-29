@@ -29,6 +29,44 @@ export const StrategyKindEnum = z.enum([
 ]);
 export type StrategyKind = z.infer<typeof StrategyKindEnum>;
 
+// 策略分类——决定「多/空」该怎么读：
+//   trend     趋势：多/空 = 趋势方向，适合判断行情大方向
+//   reversion 均值回归：多=超卖反弹、空=超买回调，逆势短线，不代表趋势转向
+//   pattern   反转形态/事件：特定形态触发的短线信号
+export type StrategyCategory = "trend" | "reversion" | "pattern";
+
+export const STRATEGY_CATEGORY: Record<StrategyKind, StrategyCategory> = {
+  ma_trend: "trend",
+  ma_cross: "trend",
+  macd: "trend",
+  roc_momentum: "trend",
+  donchian: "trend",
+  rsi_extreme: "reversion",
+  bb_reversion: "reversion",
+  candle_pattern: "pattern",
+  selling_climax: "pattern",
+  buying_climax: "pattern",
+};
+
+export const CATEGORY_LABEL: Record<StrategyCategory, string> = {
+  trend: "趋势",
+  reversion: "均值回归",
+  pattern: "反转形态",
+};
+
+// 选中策略时，告诉用户该怎么读它的多/空信号
+export const CATEGORY_HINT: Record<StrategyCategory, string> = {
+  trend: "多/空 = 趋势方向，可用于判断行情大方向",
+  reversion: "多=超卖反弹、空=超买回调（逆势短线，不代表趋势转向）",
+  pattern: "特定形态触发的短线信号，非持续趋势判断",
+};
+
+export const CATEGORY_BADGE_CLS: Record<StrategyCategory, string> = {
+  trend: "bg-blue-100 text-blue-700",
+  reversion: "bg-purple-100 text-purple-700",
+  pattern: "bg-amber-100 text-amber-700",
+};
+
 export const StrategyParamsSchema = z
   .object({
     period: z.number().int().positive().optional(),

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { STRATEGY_PRESETS, type StrategyPreset } from "@/lib/strategies/presets";
+import { STRATEGY_CATEGORY, CATEGORY_LABEL, CATEGORY_BADGE_CLS, type StrategyKind } from "@/lib/strategies/types";
 import {
   runAllBacktests,
   loadCache,
@@ -342,6 +343,7 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">{p.name}</span>
+                        <CategoryBadge kind={p.kind} />
                         <span className="text-xs text-muted-foreground">· {p.kind}</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
@@ -376,6 +378,7 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">{s.name}</span>
+                        <CategoryBadge kind={s.kind} />
                         <LevelBadge level={s.currentLevel} />
                         <BacktestSummaryBadge summary={summary} kind={s.kind} windowLbl={windowLabel(windowDays)} />
                         <span className="text-xs text-muted-foreground">· {kindLabel}</span>
@@ -443,6 +446,12 @@ function MetricHelp() {
       ) : null}
     </span>
   );
+}
+
+function CategoryBadge({ kind }: { kind: string }) {
+  const cat = STRATEGY_CATEGORY[kind as StrategyKind];
+  if (!cat) return null;
+  return <span className={cn("rounded px-1.5 py-0.5 text-[10px]", CATEGORY_BADGE_CLS[cat])}>{CATEGORY_LABEL[cat]}</span>;
 }
 
 function BacktestSummaryBadge({ summary, kind, windowLbl }: { summary: ClientSummary | "loading" | "failed" | undefined; kind: string; windowLbl: string }) {

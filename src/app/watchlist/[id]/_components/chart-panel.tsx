@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
-import { LEVEL_COLOR } from "@/lib/strategies/types";
+import { LEVEL_COLOR, STRATEGY_CATEGORY, CATEGORY_LABEL, CATEGORY_HINT, CATEGORY_BADGE_CLS, type StrategyKind } from "@/lib/strategies/types";
 
 interface Candle {
   time: string;
@@ -157,10 +157,23 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
       <CardContent>
         <ChartCanvas candles={candles} levels={levels} loading={loading} error={error} />
         {selectedStrategyId && levels.length > 0 ? (
-          <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded" style={{ background: LEVEL_COLOR.long }} /> 多</span>
-            <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded" style={{ background: LEVEL_COLOR.neutral }} /> 中</span>
-            <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded" style={{ background: LEVEL_COLOR.short }} /> 空</span>
+          <div className="mt-2 space-y-1">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded" style={{ background: LEVEL_COLOR.long }} /> 多</span>
+              <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded" style={{ background: LEVEL_COLOR.neutral }} /> 中</span>
+              <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded" style={{ background: LEVEL_COLOR.short }} /> 空</span>
+            </div>
+            {(() => {
+              const kind = strategies.find((s) => s.id.toString() === selectedStrategyId)?.kind;
+              const cat = kind ? STRATEGY_CATEGORY[kind as StrategyKind] : undefined;
+              if (!cat) return null;
+              return (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className={cn("rounded px-1.5 py-0.5 text-[10px]", CATEGORY_BADGE_CLS[cat])}>{CATEGORY_LABEL[cat]}</span>
+                  <span>{CATEGORY_HINT[cat]}</span>
+                </div>
+              );
+            })()}
           </div>
         ) : null}
       </CardContent>
