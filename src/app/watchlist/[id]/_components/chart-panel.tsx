@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
 import { CATEGORY_LABEL, STRATEGY_CATEGORY, type StrategyCategory, type StrategyKind } from "@/lib/strategies/types";
 import type { Candle as ModelCandle } from "@/lib/data/yahoo";
-import { evalStrategies, type ModelStrategy } from "./market-model";
+import { evalStrategies, combinedProbability, marketState, type ModelStrategy } from "./market-model";
 
 interface Candle {
   time: string;
@@ -67,6 +67,12 @@ function levelColor(level: string | undefined): string {
   return "#cbd5e1";
 }
 
+function pLabel(p: number): { text: string; cls: string } {
+  if (p >= 0.6) return { text: "偏多", cls: "text-green-700" };
+  if (p <= 0.4) return { text: "偏空", cls: "text-red-700" };
+  return { text: "中性", cls: "text-amber-700" };
+}
+
 function sanitizeCandles(candles: Candle[]): Candle[] {
   const byTime = new Map<string, Candle>();
   for (const c of candles) {
@@ -92,6 +98,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [combined, setCombined] = useState<{ pUp: number; regimeLabel: string } | null>(null);
 
   const grouped = useMemo(() => {
     const g: Record<StrategyCategory, ModelStrategy[]> = { trend: [], reversion: [], pattern: [] };
@@ -114,7 +121,8 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
     setError(null);
     const days = RANGE_DAYS[range];
     const warmup = strategies.reduce((m, s) => Math.max(m, warmupFor(s)), 50);
-    const fetchDays = Math.min(days + warmup * 2, 3650);
+    // 至少拉 ~800 天，保证「综合多空」的命中率估计稳定（不随所选区间大幅波动）
+    const fetchDays = Math.min(Math.max(days + warmup * 2, 800), 3650);
     const force = refreshTick > 0;
     fetch(`/api/symbols/${symbolId}/candles?days=${fetchDays}${force ? "&force=1" : ""}`)
       .then(async (res) => {
@@ -128,6 +136,12 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         }
         const model = Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
         const evals = evalStrategies(model, strategies);
+        if (evals.length > 0) {
+          const st = marketState(model.map((c) => c.close));
+          setCombined({ pUp: combinedProbability(evals, st.weights).pUp, regimeLabel: st.label });
+        } else {
+          setCombined(null);
+        }
         const sinceTs = Date.now() - days * 86400_000;
         const idx = model.findIndex((c) => c.date.getTime() >= sinceTs);
         const start = idx < 0 ? 0 : idx;
@@ -211,6 +225,17 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         </div>
 
         <ChartCanvas candles={candles} lanes={lanes} loading={loading} error={error} />
+
+        {combined ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground">综合多空</span>
+            <div className="relative h-2 w-32 overflow-hidden rounded bg-gradient-to-r from-red-200 via-slate-200 to-green-200">
+              <div className="absolute top-0 h-2 w-0.5 bg-foreground" style={{ left: `${Math.round(combined.pUp * 100)}%` }} />
+            </div>
+            <span className={cn("font-semibold", pLabel(combined.pUp).cls)}>{pLabel(combined.pUp).text} {Math.round(combined.pUp * 100)}%</span>
+            <span className="text-muted-foreground">· {combined.regimeLabel}</span>
+          </div>
+        ) : null}
 
         {lanes.length > 0 ? (
           <div className="mt-2 space-y-1 text-xs text-muted-foreground">
