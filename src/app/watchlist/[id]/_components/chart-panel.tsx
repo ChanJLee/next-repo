@@ -40,11 +40,14 @@ interface StrategyOption {
   kind: string;
 }
 
-const RANGES: { value: "1w" | "1m" | "3m" | "1y"; label: string }[] = [
+type ChartRange = "1w" | "1m" | "3m" | "1y" | "2y" | "5y";
+const RANGES: { value: ChartRange; label: string }[] = [
   { value: "1w", label: "1周" },
   { value: "1m", label: "1月" },
   { value: "3m", label: "3月" },
   { value: "1y", label: "1年" },
+  { value: "2y", label: "2年" },
+  { value: "5y", label: "5年" },
 ];
 
 const UP_COLOR = "#16a34a";
@@ -74,7 +77,7 @@ async function readJson(res: Response): Promise<any> {
 }
 
 export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: number; ticker: string; strategies: StrategyOption[] }) {
-  const [range, setRange] = useState<"1w" | "1m" | "3m" | "1y">("1m");
+  const [range, setRange] = useState<ChartRange>("1m");
   const [candles, setCandles] = useState<Candle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

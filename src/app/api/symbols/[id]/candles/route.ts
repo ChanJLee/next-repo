@@ -13,6 +13,8 @@ const RANGE_DAYS: Record<string, number> = {
   "1m": 35,
   "3m": 100,
   "1y": 380,
+  "2y": 760,
+  "5y": 1850,
 };
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
