@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createChart,
   createSeriesMarkers,
@@ -49,6 +49,19 @@ const RANGES: { value: "1w" | "1m" | "3m" | "1y"; label: string }[] = [
 
 const UP_COLOR = "#16a34a";
 const DOWN_COLOR = "#dc2626";
+
+/**
+ * 清洗 K 线给 lightweight-charts 用：丢掉 OHLC 非有限数的根，按交易日去重（保留最后一条），
+ * 并按时间升序。lightweight-charts 要求时间唯一且严格升序，否则渲染时报 "Value is null"。
+ */
+function sanitizeCandles(candles: Candle[]): Candle[] {
+  const byTime = new Map<string, Candle>();
+  for (const c of candles) {
+    if (![c.open, c.high, c.low, c.close].every((v) => typeof v === "number" && Number.isFinite(v))) continue;
+    byTime.set(c.time, c);
+  }
+  return Array.from(byTime.values()).sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+}
 
 async function readJson(res: Response): Promise<any> {
   const ct = res.headers.get("content-type") ?? "";
@@ -159,6 +172,7 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const levelSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  const clean = useMemo(() => sanitizeCandles(candles), [candles]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -220,18 +234,20 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
 
   useEffect(() => {
     if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
+    // clean 已按交易日去重并升序（lightweight-charts 要求时间唯一且严格升序，
+    // 且 OHLC 为有限数，否则渲染时抛 "Value is null"）。
     candleSeriesRef.current.setData(
-      candles.map((c) => ({ time: c.time as Time, open: c.open, high: c.high, low: c.low, close: c.close })),
+      clean.map((c) => ({ time: c.time as Time, open: c.open, high: c.high, low: c.low, close: c.close })),
     );
     volumeSeriesRef.current.setData(
-      candles.map((c) => ({
+      clean.map((c) => ({
         time: c.time as Time,
         value: c.volume,
         color: c.close >= c.open ? `${UP_COLOR}55` : `${DOWN_COLOR}55`,
       })),
     );
-    if (candles.length > 0) chartRef.current?.timeScale().fitContent();
-  }, [candles]);
+    if (clean.length > 0) chartRef.current?.timeScale().fitContent();
+  }, [clean]);
 
   useEffect(() => {
     if (!levelSeriesRef.current || !markersRef.current) return;
@@ -242,7 +258,7 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
     }
     const levelMap = new Map(levels.map((l) => [l.time, l.level]));
     levelSeriesRef.current.setData(
-      candles.map((c) => {
+      clean.map((c) => {
         const lv = levelMap.get(c.time);
         const color = lv === "long" ? LEVEL_COLOR.long : lv === "short" ? LEVEL_COLOR.short : LEVEL_COLOR.neutral;
         return { time: c.time as Time, value: 1, color };
@@ -251,7 +267,7 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
     // 在 level 转向（变成 long 或 short）的当根 K 线上画箭头
     const markers: SeriesMarker<Time>[] = [];
     let prev = "neutral";
-    for (const c of candles) {
+    for (const c of clean) {
       const lv = levelMap.get(c.time) ?? "neutral";
       if (lv !== prev) {
         if (lv === "long") {
@@ -263,7 +279,7 @@ function ChartCanvas({ candles, levels, loading, error }: { candles: Candle[]; l
       prev = lv;
     }
     markersRef.current.setMarkers(markers);
-  }, [candles, levels]);
+  }, [clean, levels]);
 
   return (
     <div className="relative">
