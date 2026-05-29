@@ -7,6 +7,9 @@ import { LEVEL_LABEL } from "@/lib/strategies/types";
 import { TriggerCheckButton } from "./_components/trigger-check-button";
 
 export const dynamic = "force-dynamic";
+// 手动/强制检查走从本页发起的 Server Action（runCheck 会拉行情+逐策略评估），
+// 吃的是本页的函数时限。对齐 cron 路由，给足 60s（Hobby 上限）防 504。
+export const maxDuration = 60;
 
 export default async function HomePage() {
   const [symbolCount, strategyCount, enabledStrategyCount, signals, recentSignalCount] = await Promise.all([
