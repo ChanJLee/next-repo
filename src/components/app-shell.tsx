@@ -1,0 +1,26 @@
+import Link from "next/link";
+import { StooqApikeyBanner } from "@/components/stooq-apikey-banner";
+import { LogoutButton } from "@/components/logout-button";
+
+/** 登录后的应用外壳：顶栏导航 + 主内容区。 */
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <header className="border-b">
+        <div className="container flex h-14 items-center gap-6">
+          <span className="font-semibold">📈 Stock Monitor</span>
+          <nav className="flex flex-1 gap-4 text-sm text-muted-foreground">
+            <Link href="/" className="hover:text-foreground">总览</Link>
+            <Link href="/watchlist" className="hover:text-foreground">监控列表</Link>
+            <Link href="/settings" className="hover:text-foreground">设置</Link>
+          </nav>
+          <LogoutButton />
+        </div>
+      </header>
+      <main className="container py-6 space-y-4">
+        <StooqApikeyBanner />
+        {children}
+      </main>
+    </>
+  );
+}

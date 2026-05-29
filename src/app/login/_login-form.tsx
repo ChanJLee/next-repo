@@ -1,36 +1,39 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { KeyRound } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
+import { isLoggedIn, setLoggedIn, verifyCredentials } from "@/lib/auth/client";
 
 export function LoginForm() {
-  const [apiKey, setApiKey] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") || "/";
 
+  // 已登录访问 /login 时直接回跳
+  useEffect(() => {
+    if (isLoggedIn()) router.replace(next);
+  }, [next, router]);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!apiKey) return;
+    if (!username || !password) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey }),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        toast.error(typeof j.error === "string" ? j.error : "验证失败");
+      const ok = await verifyCredentials(username, password);
+      if (!ok) {
+        toast.error("用户名或密码错误");
         return;
       }
+      setLoggedIn();
       router.replace(next);
       router.refresh();
     } finally {
@@ -43,25 +46,35 @@ export function LoginForm() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-base">API Key</CardTitle>
+            <LockKeyhole className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-base">登录</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="apikey">API Key</Label>
+              <Label htmlFor="username">用户名</Label>
               <Input
-                id="apikey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 autoFocus
-                autoComplete="off"
+                autoComplete="username"
                 spellCheck={false}
               />
             </div>
-            <Button type="submit" disabled={loading || !apiKey} className="w-full">
+            <div className="space-y-1.5">
+              <Label htmlFor="password">密码</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                spellCheck={false}
+              />
+            </div>
+            <Button type="submit" disabled={loading || !username || !password} className="w-full">
               {loading ? "验证中…" : "进入"}
             </Button>
           </form>
