@@ -52,6 +52,13 @@ const KINDS: KindSpec[] = [
     defaults: { period: "200", tolerance: "0", maType: "sma" },
   },
   {
+    value: "ma_cross",
+    label: "MA 金叉死叉",
+    description: "双均线交叉：MA50 上穿 MA200 = 多（金叉），下穿 = 空（死叉）。经典中期趋势切换信号。",
+    needs: ["maFast", "maSlow", "maType"],
+    defaults: { maFast: "50", maSlow: "200", maType: "sma" },
+  },
+  {
     value: "rsi_extreme",
     label: "RSI 极值",
     description: "趋势过滤的均值回归：仅在上涨趋势（价 > MA）中、RSI 超卖（< 30）才转多，持有到 RSI 回中位（默认 50）才退出，不一碰阈值就跑。空头镜像。",
@@ -483,6 +490,8 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
   const [period, setPeriod] = useState("200");
   const [tolerance, setTolerance] = useState("0");
   const [maType, setMaType] = useState<"sma" | "ema">("sma");
+  const [maFast, setMaFast] = useState("50");
+  const [maSlow, setMaSlow] = useState("200");
   const [longBelow, setLongBelow] = useState("30");
   const [shortAbove, setShortAbove] = useState("70");
   const [exitMid, setExitMid] = useState("50");
@@ -513,6 +522,8 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
     if (d.period) setPeriod(d.period);
     if (d.tolerance) setTolerance(d.tolerance);
     if (d.maType) setMaType(d.maType as "sma" | "ema");
+    if (d.maFast) setMaFast(d.maFast);
+    if (d.maSlow) setMaSlow(d.maSlow);
     if (d.longBelow) setLongBelow(d.longBelow);
     if (d.shortAbove) setShortAbove(d.shortAbove);
     if (d.exitMid) setExitMid(d.exitMid);
@@ -543,6 +554,8 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
     if (spec.needs.includes("period")) params.period = Number(period);
     if (spec.needs.includes("tolerance")) params.tolerance = Number(tolerance);
     if (spec.needs.includes("maType")) params.maType = maType;
+    if (spec.needs.includes("maFast")) params.maFast = Number(maFast);
+    if (spec.needs.includes("maSlow")) params.maSlow = Number(maSlow);
     if (spec.needs.includes("longBelow")) params.longBelow = Number(longBelow);
     if (spec.needs.includes("shortAbove")) params.shortAbove = Number(shortAbove);
     if (spec.needs.includes("exitMid")) params.exitMid = Number(exitMid);
@@ -616,6 +629,12 @@ function AddStrategyForm({ symbolId, onAdded, onCancel }: { symbolId: number; on
               <SelectContent><SelectItem value="sma">SMA</SelectItem><SelectItem value="ema">EMA</SelectItem></SelectContent>
             </Select>
           </div>
+        )}
+        {spec.needs.includes("maFast") && (
+          <div className="flex flex-col gap-1.5"><Label>快线周期 maFast</Label><Input value={maFast} onChange={(e) => setMaFast(e.target.value)} inputMode="numeric" placeholder="如 50" /></div>
+        )}
+        {spec.needs.includes("maSlow") && (
+          <div className="flex flex-col gap-1.5"><Label>慢线周期 maSlow</Label><Input value={maSlow} onChange={(e) => setMaSlow(e.target.value)} inputMode="numeric" placeholder="如 200" /></div>
         )}
         {spec.needs.includes("longBelow") && (
           <div className="flex flex-col gap-1.5"><Label>多阈值（RSI &lt;）</Label><Input value={longBelow} onChange={(e) => setLongBelow(e.target.value)} inputMode="decimal" /></div>

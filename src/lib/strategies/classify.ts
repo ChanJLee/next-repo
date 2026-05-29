@@ -35,6 +35,7 @@ export function levelSeries(kind: StrategyKind, params: StrategyParams, candles:
   const ctx = buildContext(candles);
   switch (kind) {
     case "ma_trend":      return seriesMaTrend(params, ctx);
+    case "ma_cross":      return seriesMaCross(params, ctx);
     case "rsi_extreme":   return seriesRsiExtreme(params, ctx);
     case "macd":          return seriesMacd(params, ctx);
     case "roc_momentum":  return seriesRocMomentum(params, ctx);
@@ -77,6 +78,26 @@ function seriesMaTrend(params: StrategyParams, ctx: SeriesContext): Level[] {
     const v = ma[i - offset];
     if (close > v * (1 + tol)) return "long";
     if (close < v * (1 - tol)) return "short";
+    return "neutral";
+  });
+}
+
+// ---------- ma_cross ----------
+// 双均线交叉：快线在慢线之上=多（金叉状态），之下=空（死叉状态）。
+function seriesMaCross(params: StrategyParams, ctx: SeriesContext): Level[] {
+  const fast = params.maFast ?? 50;
+  const slow = params.maSlow ?? 200;
+  const maFn = params.maType === "ema" ? EMA : SMA;
+  const maF = maFn.calculate({ values: ctx.closes, period: fast });
+  const maS = maFn.calculate({ values: ctx.closes, period: slow });
+  const offF = ctx.closes.length - maF.length;
+  const offS = ctx.closes.length - maS.length;
+  return ctx.closes.map((_, i) => {
+    if (i < offF || i < offS) return "neutral"; // 慢线预热完成才有意义
+    const f = maF[i - offF];
+    const s = maS[i - offS];
+    if (f > s) return "long";
+    if (f < s) return "short";
     return "neutral";
   });
 }
@@ -470,6 +491,17 @@ function detailFor(
       return {
         values: { close, ma, period },
         description: `价格 ${close?.toFixed(2)} vs MA${period} ${ma?.toFixed(2) ?? "n/a"}`,
+      };
+    }
+    case "ma_cross": {
+      const fast = params.maFast ?? 50;
+      const slow = params.maSlow ?? 200;
+      const maFn = params.maType === "ema" ? EMA : SMA;
+      const f = maFn.calculate({ values: ctx.closes, period: fast }).at(-1);
+      const s = maFn.calculate({ values: ctx.closes, period: slow }).at(-1);
+      return {
+        values: { maFast: f, maSlow: s, fast, slow },
+        description: `MA${fast} ${f?.toFixed(2) ?? "n/a"} vs MA${slow} ${s?.toFixed(2) ?? "n/a"}（${level === "long" ? "金叉" : level === "short" ? "死叉" : "—"}）`,
       };
     }
     case "rsi_extreme": {
