@@ -13,7 +13,9 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { STRATEGY_PRESETS, type StrategyPreset } from "@/lib/strategies/presets";
-import { STRATEGY_CATEGORY, CATEGORY_LABEL, CATEGORY_BADGE_CLS, type StrategyKind } from "@/lib/strategies/types";
+import { STRATEGY_CATEGORY, CATEGORY_LABEL, CATEGORY_BADGE_CLS, type StrategyKind, type StrategyCategory } from "@/lib/strategies/types";
+
+const CATEGORY_ORDER: StrategyCategory[] = ["trend", "reversion", "pattern"];
 import {
   runAllBacktests,
   loadCache,
@@ -367,34 +369,53 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
         {strategies.length === 0 ? (
           <p className="text-sm text-muted-foreground">还没有策略。点【添加策略】开始。</p>
         ) : (
-          <div className="space-y-2">
-            {strategies.map((s) => {
-              const kindLabel = KINDS.find((k) => k.value === s.kind)?.label ?? s.kind;
-              const paramObj = (() => { try { return JSON.parse(s.params); } catch { return {}; } })();
-              const summary = summaries[s.id];
-              return (
-                <div key={s.id} className="rounded-md border">
-                  <div className="flex items-center justify-between gap-3 px-3 py-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{s.name}</span>
-                        <CategoryBadge kind={s.kind} />
-                        <LevelBadge level={s.currentLevel} />
-                        <BacktestSummaryBadge summary={summary} kind={s.kind} windowLbl={windowLabel(windowDays)} />
-                        <span className="text-xs text-muted-foreground">· {kindLabel}</span>
+          <div className="space-y-4">
+            {(() => {
+              const groups: { key: string; label: string; cls: string; items: StrategyVM[] }[] = [];
+              for (const cat of CATEGORY_ORDER) {
+                const items = strategies.filter((s) => STRATEGY_CATEGORY[s.kind as StrategyKind] === cat);
+                if (items.length) groups.push({ key: cat, label: CATEGORY_LABEL[cat], cls: CATEGORY_BADGE_CLS[cat], items });
+              }
+              const other = strategies.filter((s) => !STRATEGY_CATEGORY[s.kind as StrategyKind]);
+              if (other.length) groups.push({ key: "other", label: "其他", cls: "bg-slate-100 text-slate-600", items: other });
+
+              const renderRow = (s: StrategyVM) => {
+                const kindLabel = KINDS.find((k) => k.value === s.kind)?.label ?? s.kind;
+                const paramObj = (() => { try { return JSON.parse(s.params); } catch { return {}; } })();
+                const summary = summaries[s.id];
+                return (
+                  <div key={s.id} className="rounded-md border">
+                    <div className="flex items-center justify-between gap-3 px-3 py-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm">{s.name}</span>
+                          <LevelBadge level={s.currentLevel} />
+                          <BacktestSummaryBadge summary={summary} kind={s.kind} windowLbl={windowLabel(windowDays)} />
+                          <span className="text-xs text-muted-foreground">· {kindLabel}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {Object.keys(paramObj).length > 0 ? JSON.stringify(paramObj) : "默认参数"} · 冷却 {Math.round(s.cooldownSec / 60)} 分钟
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {Object.keys(paramObj).length > 0 ? JSON.stringify(paramObj) : "默认参数"} · 冷却 {Math.round(s.cooldownSec / 60)} 分钟
+                      <div className="flex items-center gap-1">
+                        <Switch checked={s.enabled} onCheckedChange={(en) => toggle(s.id, en)} />
+                        <Button variant="ghost" size="icon" onClick={() => del(s.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Switch checked={s.enabled} onCheckedChange={(en) => toggle(s.id, en)} />
-                      <Button variant="ghost" size="icon" onClick={() => del(s.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
+                );
+              };
+
+              return groups.map((g) => (
+                <div key={g.key} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("rounded px-1.5 py-0.5 text-[10px]", g.cls)}>{g.label}</span>
+                    <span className="text-xs text-muted-foreground">{g.items.length} 个</span>
+                  </div>
+                  {g.items.map(renderRow)}
                 </div>
-              );
-            })}
+              ));
+            })()}
           </div>
         )}
       </CardContent>
