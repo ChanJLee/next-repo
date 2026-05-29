@@ -59,23 +59,46 @@ function toUtcDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
+// 一次最近多少根用 upsert 兜底更新（盘中/最新一根 OHLC 会变）；
+// 其余历史根是不可变的，走批量 createMany 一条语句插入，避免上千次单条往返。
+const RECENT_UPSERT = 5;
+
 async function upsertCandles(symbolId: number, candles: Candle[]): Promise<void> {
   if (candles.length === 0) return;
-  // 同一批里若有同一天的多条，按日归并保留最后一条，避免事务内主键冲突
+  // 同一批里若有同一天的多条，按日归并保留最后一条
   const byDay = new Map<number, Candle>();
   for (const c of candles) {
     const day = toUtcDay(c.date);
     byDay.set(day.getTime(), { ...c, date: day });
   }
-  await prisma.$transaction(
-    Array.from(byDay.values()).map((c) =>
-      prisma.candle.upsert({
-        where: { symbolId_date: { symbolId, date: c.date } },
-        update: { open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume },
-        create: { symbolId, date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume },
-      }),
-    ),
-  );
+  const rows = Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  // 查已存在的日期，只 createMany 新增的（libSQL 上批量插入是单条语句，远快于逐条 upsert）
+  const existing = await prisma.candle.findMany({
+    where: { symbolId, date: { in: rows.map((r) => r.date) } },
+    select: { date: true },
+  });
+  const have = new Set(existing.map((e) => e.date.getTime()));
+  const toInsert = rows.filter((r) => !have.has(r.date.getTime()));
+  if (toInsert.length > 0) {
+    await prisma.candle.createMany({
+      data: toInsert.map((c) => ({ symbolId, date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume })),
+    });
+  }
+
+  // 仅对最近几根做 upsert，捕捉最新一根的盘中变化（历史根不变，无需更新）
+  const recent = rows.slice(-RECENT_UPSERT).filter((r) => have.has(r.date.getTime()));
+  if (recent.length > 0) {
+    await prisma.$transaction(
+      recent.map((c) =>
+        prisma.candle.upsert({
+          where: { symbolId_date: { symbolId, date: c.date } },
+          update: { open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume },
+          create: { symbolId, date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume },
+        }),
+      ),
+    );
+  }
 }
 
 interface CacheCandlesOpts {

@@ -5,6 +5,8 @@ import { getStooqApikeyFromCookie } from "@/lib/data/stooq-key";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// 回填多年历史要拉数据 + 批量写库，给足时限（Hobby 上限）。
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const id = Number(params.id);

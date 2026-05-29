@@ -5,6 +5,8 @@ import { getStooqApikeyFromCookie } from "@/lib/data/stooq-key";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// 大窗口（如 5 年回测）首次拉取要写不少历史，给足时限防 504。
+export const maxDuration = 60;
 
 const RANGE_DAYS: Record<string, number> = {
   "1w": 14,
