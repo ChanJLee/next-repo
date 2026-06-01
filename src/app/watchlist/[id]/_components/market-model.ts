@@ -79,6 +79,8 @@ export function evalStrategies(candles: Candle[], strategies: ModelStrategy[]): 
 const clamp = (p: number) => Math.min(0.99, Math.max(0.01, p));
 const logit = (p: number) => Math.log(p / (1 - p));
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+// 证据强度：仅当命中率 > 50% 才在该方向上贡献，否则记 0（不把"历史常错的信号"反向当成相反证据，避免曲线反直觉）。
+const edge = (acc: number) => Math.max(0, logit(clamp(acc)));
 
 /**
  * Hurst 指数（R/S 重标极差法，基于近窗口的对数收益）：
@@ -173,8 +175,8 @@ export function combinedProbability(
     if (members.length === 0) continue;
     let sum = 0, n = 0, longN = 0, shortN = 0;
     for (const m of members) {
-      if (m.current === "long") { sum += logit(clamp(m.accLong)); n++; longN++; }
-      else if (m.current === "short") { sum += -logit(clamp(m.accShort)); n++; shortN++; }
+      if (m.current === "long") { sum += edge(m.accLong); n++; longN++; }
+      else if (m.current === "short") { sum += -edge(m.accShort); n++; shortN++; }
     }
     const evidence = n > 0 ? sum / n : 0; // 组内平均（降相关）
     const w = weights[cat] ?? 1;
@@ -203,8 +205,8 @@ export function combinedProbabilitySeries(
       let sum = 0, n = 0;
       for (const m of members) {
         const lv = m.levels[i];
-        if (lv === "long") { sum += logit(clamp(m.accLong)); n++; }
-        else if (lv === "short") { sum += -logit(clamp(m.accShort)); n++; }
+        if (lv === "long") { sum += edge(m.accLong); n++; }
+        else if (lv === "short") { sum += -edge(m.accShort); n++; }
       }
       if (n > 0) total += (weights[cat] ?? 1) * (sum / n);
     }
