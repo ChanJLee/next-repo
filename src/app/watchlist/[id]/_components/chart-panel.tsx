@@ -154,7 +154,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         // 逐根综合多空概率曲线
         if (evals.length > 0) {
           const st = marketState(model.map((c) => c.close));
-          const arr = combinedProbabilitySeries(evals, st.weights, start, model.length);
+          const arr = combinedProbabilitySeries(model, evals, st.weights, start, model.length);
           setProbSeries(disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), value: arr[k] })));
           setCombined({ pUp: arr[arr.length - 1] ?? 0.5, regimeLabel: st.label });
         } else {
@@ -233,10 +233,15 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         <ChartCanvas candles={candles} lanes={lanes} probSeries={probSeries} loading={loading} error={error} />
 
         {combined ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-muted-foreground">当前综合多空</span>
-            <span className={cn("font-semibold", pLabel(combined.pUp).cls)}>{pLabel(combined.pUp).text} {Math.round(combined.pUp * 100)}%</span>
-            <span className="text-muted-foreground">· {combined.regimeLabel} · 图中绿/红曲线 = 每根 K 线的多空概率（以 50% 为界）</span>
+          <div className="mt-2 space-y-1 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground">当前综合多空</span>
+              <span className={cn("font-semibold", pLabel(combined.pUp).cls)}>{pLabel(combined.pUp).text} {Math.round(combined.pUp * 100)}%</span>
+              <span className="text-muted-foreground">· {combined.regimeLabel}</span>
+            </div>
+            <div className="text-muted-foreground">
+              图下概率曲线：历史拟合 / 模型校准，用来看概率是否和后续走势同向。
+            </div>
           </div>
         ) : null}
 
@@ -249,7 +254,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
                 </span>
               ))}
             </div>
-            <div>底部各带 = 所选策略的多空：<span className="text-green-600">绿=多</span> / <span className="text-red-600">红=空</span> / 灰=中性（从上到下依次为上面列出的策略）。绿带对着涨、红带对着跌 = 拟合好。</div>
+            <div>底部各带 = 所选策略的多空：<span className="text-green-600">绿=多</span> / <span className="text-red-600">红=空</span> / 灰=中性（从上到下依次为上面列出的策略）。绿带对着涨、红带对着跌 = 历史拟合较好。</div>
           </div>
         ) : null}
       </CardContent>

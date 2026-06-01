@@ -48,7 +48,7 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
         const st = marketState(candles.map((c) => c.close));
         const evals = evalStrategies(candles, strategies);
         setRegime(st);
-        setRead(combinedProbability(evals, st.weights));
+        setRead(combinedProbability(candles, evals, st.weights));
         setState("ready");
       })
       .catch(() => { if (!aborted) setState("failed"); });
@@ -98,8 +98,9 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
             {/* 分类拆解 */}
             <div className="space-y-1.5">
               {read.byCategory.map((c) => {
-                const catP = Math.round(sigmoid(c.evidence) * 100);
-                const lean = c.evidence > 0.05 ? "text-green-700" : c.evidence < -0.05 ? "text-red-700" : "text-muted-foreground";
+                const weightedEvidence = c.evidence * c.weight;
+                const catP = Math.round(sigmoid(weightedEvidence) * 100);
+                const lean = weightedEvidence > 0.05 ? "text-green-700" : weightedEvidence < -0.05 ? "text-red-700" : "text-muted-foreground";
                 return (
                   <div key={c.category} className="flex items-center justify-between gap-2 text-xs">
                     <span className="text-muted-foreground">
@@ -116,7 +117,10 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
             </div>
 
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              贝叶斯加权：各策略按历史命中率赋权（样本少则收缩），组内平均降相关、跨组合并。仅辅助判断，非投资建议。
+              当前综合多空：当前读数，用最新 K 线、当前策略状态给出一个概率参考。
+            </p>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              谦逊概率模型：走查式样本外回测显示，日线技术特征对未来 10 日方向几乎没有稳定边际，强趋势末端甚至轻微反预测。因此 P(多) 以历史无条件上涨率（基准率）为锚，只做小幅偏移、刻意低自信。仅辅助判断，非投资建议。
             </p>
           </>
         ) : null}

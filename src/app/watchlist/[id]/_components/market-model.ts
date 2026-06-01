@@ -2,11 +2,13 @@
  * 客户端多空模型（全部在浏览器算，服务端只提供已缓存的 K 线）。
  *
  * 思路：
- *  1. 每条策略本地算 levelSeries，得到当前级别 + 历史方向准确率（信号后 HORIZON 日的命中率，
+ *  1. 每条策略本地算 levelSeries，得到当前级别 + 历史方向准确率（只统计真正转多/转空的触发点，
+ *     再按策略类别看未来不同窗口的命中率；
  *     用 Beta 伪计数收缩，样本少则趋向 0.5、权重自动变小）。
- *  2. 贝叶斯对数几率合并：每条有信号的策略贡献 log(acc/(1-acc)) 证据；
- *     **组内（同分类）取平均降相关**，再**跨分类相加**——避免一堆相关的趋势策略重复计数、过度自信。
- *  3. 输出 P(多) 概率 + 各分类贡献拆解。
+ *  2. 把策略结构压缩成多空证据分数（组内平均降相关、按 Hurst 加权）——仅用于分类拆解展示。
+ *  3. 概率 P(多) 走「谦逊收缩」路线：以历史无条件上涨率（base rate）为锚，
+ *     只让样本外验证过的弱信号（短周期 20 日动量）做小幅偏移，并对过度拉伸做反向修正，
+ *     最后把偏移限制在基准率附近的窄带内。理由见下方常量注释与 scripts/backtest-model.ts。
  *  同一份 evals 也用于图表的「分类共识带」。
  */
 import { levelSeries } from "@/lib/strategies/classify";
@@ -16,6 +18,7 @@ import {
   STRATEGY_CATEGORY,
   type StrategyCategory,
   type Level,
+  type StrategyParams,
 } from "@/lib/strategies/types";
 import type { Candle } from "@/lib/data/yahoo";
 
@@ -26,8 +29,26 @@ export interface ModelStrategy {
   params: string;
 }
 
-const ACC_HORIZON = 10; // 评估「信号后未来 N 个交易日方向」
+// 混沌系统里信号有效期有限：趋势慢、均值回归较快、形态最短。
+const CATEGORY_HORIZON: Record<StrategyCategory, number> = {
+  trend: 20,
+  reversion: 7,
+  pattern: 5,
+};
 const PSEUDO = 8; // Beta 平滑伪计数：样本不足时把准确率收缩向 0.5
+const CALIBRATION_HORIZON = 10; // 概率定义：未来 N 个交易日收盘价更高
+// 走查式样本外回测（scripts/backtest-model.ts）结论：在日线单标的上，
+// 趋势强度 / 乖离对未来 10 日方向几乎没有稳定边际，且「强趋势 + 高乖离」的
+// 极端状态反而轻微反预测（均值回归）。唯一站得住的弱信号是短周期 20 日动量。
+// 因此模型刻意「谦逊」：以历史无条件上涨率为锚，只让短动量做小幅偏移，并裁掉
+// 会制造反预测极值的相似样本放大。MAX_TILT 限制概率只在基准率附近窄幅波动。
+// 走查回测（scripts/backtest-baselines.ts）显示：单纯顺势的 20 日动量跨期不稳定
+// （全历史微正、近段窗口转负），但「状态条件化动量」——趋势态(Hurst>0.5)顺动量、
+// 震荡态(<0.5)反动量——在 5~10 日窗口是所有信号里最稳的（AUC≈0.55）。
+// 即便如此边际仍很弱，所以偏移系数保持小量级、MAX_TILT 收窄，避免虚假自信。
+const BETA_MOMENTUM = 0.15; // 状态条件化动量的偏移系数（log-odds，弱量级）
+const BETA_REVERSION = 0.04; // 乖离的反向小幅修正（过度拉伸轻微看回归）
+const MAX_TILT = 0.22; // 相对基准率的最大 log-odds 偏移，避免虚假自信
 const CATS: StrategyCategory[] = ["trend", "reversion", "pattern"];
 
 export interface StratEval {
@@ -36,10 +57,24 @@ export interface StratEval {
   category: StrategyCategory;
   levels: Level[];
   current: Level;
+  horizon: number;
   accLong: number; // 历史「看多后真涨」的命中率（已收缩）
   accShort: number; // 历史「看空后真跌」的命中率（已收缩）
   longN: number;
   shortN: number;
+}
+
+function horizonFor(category: StrategyCategory, params: StrategyParams): number {
+  if (category === "pattern" && typeof params.holdBars === "number") {
+    return Math.min(10, Math.max(3, params.holdBars));
+  }
+  return CATEGORY_HORIZON[category];
+}
+
+function isSignalStart(levels: Level[], i: number): boolean {
+  const current = levels[i];
+  if (current === "neutral") return false;
+  return i === 0 || levels[i - 1] !== current;
 }
 
 export function evalStrategies(candles: Candle[], strategies: ModelStrategy[]): StratEval[] {
@@ -54,19 +89,23 @@ export function evalStrategies(candles: Candle[], strategies: ModelStrategy[]): 
     } catch {
       p = {};
     }
+    const category = STRATEGY_CATEGORY[k.data];
+    const horizon = horizonFor(category, p);
     const levels = levelSeries(k.data, p, candles);
     let lN = 0, lH = 0, sN = 0, sH = 0;
-    for (let i = 0; i < levels.length - ACC_HORIZON; i++) {
-      const fwd = closes[i + ACC_HORIZON] - closes[i];
+    for (let i = 0; i < levels.length - horizon; i++) {
+      if (!isSignalStart(levels, i)) continue;
+      const fwd = closes[i + horizon] - closes[i];
       if (levels[i] === "long") { lN++; if (fwd > 0) lH++; }
       else if (levels[i] === "short") { sN++; if (fwd < 0) sH++; }
     }
     out.push({
       id: s.id,
       name: s.name,
-      category: STRATEGY_CATEGORY[k.data],
+      category,
       levels,
       current: levels[levels.length - 1] ?? "neutral",
+      horizon,
       accLong: (lH + PSEUDO / 2) / (lN + PSEUDO),
       accShort: (sH + PSEUDO / 2) / (sN + PSEUDO),
       longN: lN,
@@ -81,6 +120,56 @@ const logit = (p: number) => Math.log(p / (1 - p));
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
 // 证据强度：仅当命中率 > 50% 才在该方向上贡献，否则记 0（不把"历史常错的信号"反向当成相反证据，避免曲线反直觉）。
 const edge = (acc: number) => Math.max(0, logit(clamp(acc)));
+const clampFeature = (v: number) => Math.min(4, Math.max(-4, Number.isFinite(v) ? v : 0));
+
+function mean(values: number[]): number {
+  return values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function maAt(closes: number[], i: number, period: number): number | null {
+  if (i + 1 < period) return null;
+  return mean(closes.slice(i + 1 - period, i + 1));
+}
+
+function dailyVolAt(closes: number[], i: number, period: number = 20): number {
+  if (i < period) return 0.02;
+  const returns: number[] = [];
+  for (let j = i + 1 - period; j <= i; j++) {
+    const prev = closes[j - 1];
+    const cur = closes[j];
+    if (prev > 0 && cur > 0) returns.push(Math.log(cur / prev));
+  }
+  if (returns.length < 2) return 0.02;
+  const m = mean(returns);
+  const variance = mean(returns.map((r) => (r - m) ** 2));
+  return Math.max(0.005, Math.sqrt(variance));
+}
+
+function normalizedReturn(closes: number[], i: number, lookback: number, vol: number): number {
+  if (i < lookback || closes[i - lookback] <= 0 || closes[i] <= 0) return 0;
+  return clampFeature(Math.log(closes[i] / closes[i - lookback]) / (vol * Math.sqrt(lookback)));
+}
+
+function normalizedDistanceToMa(closes: number[], i: number, period: number, vol: number): number {
+  const ma = maAt(closes, i, period);
+  if (!ma || ma <= 0 || closes[i] <= 0) return 0;
+  return clampFeature(Math.log(closes[i] / ma) / (vol * Math.sqrt(period / 5)));
+}
+
+function rsiFeature(closes: number[], i: number, period: number = 14): number {
+  if (i < period) return 0;
+  let gain = 0;
+  let loss = 0;
+  for (let j = i + 1 - period; j <= i; j++) {
+    const diff = closes[j] - closes[j - 1];
+    if (diff >= 0) gain += diff;
+    else loss -= diff;
+  }
+  if (gain === 0 && loss === 0) return 0;
+  const rs = loss === 0 ? 100 : gain / loss;
+  const rsi = 100 - 100 / (1 + rs);
+  return clampFeature((rsi - 50) / 25);
+}
 
 /**
  * Hurst 指数（R/S 重标极差法，基于近窗口的对数收益）：
@@ -164,10 +253,11 @@ export interface CombinedRead {
   byCategory: CategoryRead[];
 }
 
-export function combinedProbability(
+function categoryReadsAt(
   evals: StratEval[],
   weights: Record<StrategyCategory, number> = { trend: 1, reversion: 1, pattern: 1 },
-): CombinedRead {
+  index: number,
+): { total: number; byCategory: CategoryRead[] } {
   let total = 0;
   const byCategory: CategoryRead[] = [];
   for (const cat of CATS) {
@@ -175,15 +265,113 @@ export function combinedProbability(
     if (members.length === 0) continue;
     let sum = 0, n = 0, longN = 0, shortN = 0;
     for (const m of members) {
-      if (m.current === "long") { sum += edge(m.accLong); n++; longN++; }
-      else if (m.current === "short") { sum += -edge(m.accShort); n++; shortN++; }
+      const level = m.levels[index] ?? "neutral";
+      if (level === "long") { sum += edge(m.accLong); n++; longN++; }
+      else if (level === "short") { sum += -edge(m.accShort); n++; shortN++; }
     }
     const evidence = n > 0 ? sum / n : 0; // 组内平均（降相关）
     const w = weights[cat] ?? 1;
     byCategory.push({ category: cat, evidence, weight: w, longN, shortN, total: members.length });
     total += w * evidence; // 按市场状态加权后跨分类相加
   }
-  return { pUp: sigmoid(total), logodds: total, byCategory };
+  return { total, byCategory };
+}
+
+interface CalibrationModel {
+  features: Array<number[] | null>;
+  labels: Array<number | null>;
+  rawScores: number[];
+  baseRate: number;
+}
+
+function buildFeature(
+  candles: Candle[],
+  evals: StratEval[],
+  weights: Record<StrategyCategory, number>,
+  index: number,
+): { rawScore: number; feature: number[] | null } {
+  const closes = candles.map((c) => c.close);
+  if (index < 60) return { rawScore: 0, feature: null };
+
+  const { total } = categoryReadsAt(evals, weights, index);
+  const vol = dailyVolAt(closes, index);
+  const feature = [
+    clampFeature(total),
+    normalizedReturn(closes, index, 5, vol),
+    normalizedReturn(closes, index, 20, vol),
+    normalizedDistanceToMa(closes, index, 20, vol),
+    normalizedDistanceToMa(closes, index, 60, vol),
+    rsiFeature(closes, index),
+  ];
+  const extension = Math.max(Math.abs(feature[3]), Math.abs(feature[4]));
+  const overheat = Math.max(0, feature[5]);
+  feature.push(clampFeature(extension), clampFeature(overheat));
+  // feature[8] = 状态条件化动量：趋势态顺势、震荡态反向（点-时 Hurst，仅用 index 之前的数据）
+  const h = hurstExponent(closes.slice(0, index + 1));
+  const regimeSign = h == null ? 0 : Math.sign(h - 0.5);
+  feature.push(clampFeature(regimeSign * feature[2]));
+  return { rawScore: total, feature };
+}
+
+function buildCalibrationModel(
+  candles: Candle[],
+  evals: StratEval[],
+  weights: Record<StrategyCategory, number>,
+): CalibrationModel {
+  const features: Array<number[] | null> = [];
+  const labels: Array<number | null> = [];
+  const rawScores: number[] = [];
+  let labelSum = 0;
+  let labelN = 0;
+
+  for (let i = 0; i < candles.length; i++) {
+    const { rawScore, feature } = buildFeature(candles, evals, weights, i);
+    rawScores.push(rawScore);
+    features.push(feature);
+
+    if (i + CALIBRATION_HORIZON < candles.length) {
+      const label = candles[i + CALIBRATION_HORIZON].close > candles[i].close ? 1 : 0;
+      labels.push(label);
+      labelSum += label;
+      labelN++;
+    } else {
+      labels.push(null);
+    }
+  }
+
+  return {
+    features,
+    labels,
+    rawScores,
+    baseRate: labelN > 0 ? labelSum / labelN : 0.5,
+  };
+}
+
+function calibratedProbability(model: CalibrationModel, index: number): number {
+  const target = model.features[index];
+  // base rate（历史无条件上涨率）就是没有任何边际时的最佳猜测
+  const anchor = clamp(model.baseRate);
+  if (!target) return anchor;
+
+  // feature[8] = 状态条件化动量（趋势态顺势/震荡态反向，样本外最稳的弱信号）
+  // feature[3] = 距 20 日均线乖离（过度拉伸时轻微反向修正）
+  const regimeMomentum = target[8] ?? 0;
+  const extension = target[3] ?? 0;
+  const tilt = clampTilt(BETA_MOMENTUM * Math.tanh(regimeMomentum) - BETA_REVERSION * Math.tanh(extension));
+  return clamp(sigmoid(logit(anchor) + tilt));
+}
+
+const clampTilt = (x: number) => Math.min(MAX_TILT, Math.max(-MAX_TILT, x));
+
+export function combinedProbability(
+  candles: Candle[],
+  evals: StratEval[],
+  weights: Record<StrategyCategory, number> = { trend: 1, reversion: 1, pattern: 1 },
+): CombinedRead {
+  const index = candles.length - 1;
+  const { total, byCategory } = categoryReadsAt(evals, weights, index);
+  const model = buildCalibrationModel(candles, evals, weights);
+  return { pUp: calibratedProbability(model, index), logodds: total, byCategory };
 }
 
 /**
@@ -192,25 +380,16 @@ export function combinedProbability(
  * 注：命中率是全历史估计（含该根之后的数据），属于"事后视角"的展示，非严格无未来函数的回测。
  */
 export function combinedProbabilitySeries(
+  candles: Candle[],
   evals: StratEval[],
   weights: Record<StrategyCategory, number>,
   fromIdx: number,
   toIdx: number,
 ): number[] {
-  const byCat = CATS.map((cat) => ({ cat, members: evals.filter((e) => e.category === cat) })).filter((g) => g.members.length > 0);
+  const model = buildCalibrationModel(candles, evals, weights);
   const out: number[] = [];
   for (let i = fromIdx; i < toIdx; i++) {
-    let total = 0;
-    for (const { cat, members } of byCat) {
-      let sum = 0, n = 0;
-      for (const m of members) {
-        const lv = m.levels[i];
-        if (lv === "long") { sum += edge(m.accLong); n++; }
-        else if (lv === "short") { sum += -edge(m.accShort); n++; }
-      }
-      if (n > 0) total += (weights[cat] ?? 1) * (sum / n);
-    }
-    out.push(sigmoid(total));
+    out.push(calibratedProbability(model, i));
   }
   return out;
 }
