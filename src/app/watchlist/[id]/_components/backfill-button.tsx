@@ -6,7 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-export function BackfillButton({ symbolId, days = 730 }: { symbolId: number; days?: number }) {
+export function BackfillButton({ symbolId, days = 1825 }: { symbolId: number; days?: number }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -19,7 +19,11 @@ export function BackfillButton({ symbolId, days = 730 }: { symbolId: number; day
         toast.error(json.error ?? "回填失败");
         return;
       }
-      toast.success(`已回填 ${json.inserted} 条历史数据（来源：${json.source}）`);
+      if (json.inserted > 0) {
+        toast.success(`新增 ${json.inserted} 条历史（更新 ${json.updated}，来源 ${json.source}）`);
+      } else {
+        toast.message(`已是最新，无新增`, { description: `该区间库内已有 ${json.fetched} 条（更新最近 ${json.updated} 条）` });
+      }
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "网络错误");

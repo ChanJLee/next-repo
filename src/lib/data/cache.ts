@@ -63,8 +63,8 @@ function toUtcDay(date: Date): Date {
 // 其余历史根是不可变的，走批量 createMany 一条语句插入，避免上千次单条往返。
 const RECENT_UPSERT = 5;
 
-async function upsertCandles(symbolId: number, candles: Candle[]): Promise<void> {
-  if (candles.length === 0) return;
+async function upsertCandles(symbolId: number, candles: Candle[]): Promise<{ inserted: number; updated: number }> {
+  if (candles.length === 0) return { inserted: 0, updated: 0 };
   // 同一批里若有同一天的多条，按日归并保留最后一条
   const byDay = new Map<number, Candle>();
   for (const c of candles) {
@@ -99,6 +99,7 @@ async function upsertCandles(symbolId: number, candles: Candle[]): Promise<void>
       ),
     );
   }
+  return { inserted: toInsert.length, updated: recent.length };
 }
 
 interface CacheCandlesOpts {
@@ -164,10 +165,10 @@ export async function backfillCandles(
   ticker: string,
   days: number = 730,
   stooqApikey?: string,
-): Promise<{ inserted: number; source: CandleSource }> {
+): Promise<{ inserted: number; updated: number; fetched: number; source: CandleSource }> {
   const { candles, source } = await fetchCandlesFromAny(ticker, days, stooqApikey);
-  await upsertCandles(symbolId, candles);
-  return { inserted: candles.length, source };
+  const { inserted, updated } = await upsertCandles(symbolId, candles);
+  return { inserted, updated, fetched: candles.length, source };
 }
 
 /**
