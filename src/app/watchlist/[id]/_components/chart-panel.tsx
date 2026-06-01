@@ -5,6 +5,7 @@ import {
   createChart,
   CandlestickSeries,
   HistogramSeries,
+  BaselineSeries,
   ColorType,
   type IChartApi,
   type ISeriesApi,
@@ -17,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
 import { CATEGORY_LABEL, STRATEGY_CATEGORY, type StrategyCategory, type StrategyKind } from "@/lib/strategies/types";
 import type { Candle as ModelCandle } from "@/lib/data/yahoo";
-import { evalStrategies, combinedProbability, marketState, type ModelStrategy } from "./market-model";
+import { evalStrategies, combinedProbability, combinedProbabilitySeries, marketState, type ModelStrategy } from "./market-model";
 
 interface Candle {
   time: string;
@@ -47,8 +48,8 @@ const DOWN_COLOR = "#dc2626";
 
 const LANE_ORDER: StrategyCategory[] = ["trend", "reversion", "pattern"];
 const LANE_MARGINS: Record<StrategyCategory, { top: number; bottom: number }> = {
-  trend: { top: 0.74, bottom: 0.18 },
-  reversion: { top: 0.84, bottom: 0.08 },
+  trend: { top: 0.78, bottom: 0.15 },
+  reversion: { top: 0.86, bottom: 0.07 },
   pattern: { top: 0.94, bottom: 0.0 },
 };
 
@@ -99,6 +100,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
   const [error, setError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [combined, setCombined] = useState<{ pUp: number; regimeLabel: string } | null>(null);
+  const [probSeries, setProbSeries] = useState<{ time: string; value: number }[]>([]);
 
   const grouped = useMemo(() => {
     const g: Record<StrategyCategory, ModelStrategy[]> = { trend: [], reversion: [], pattern: [] };
@@ -136,12 +138,6 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         }
         const model = Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
         const evals = evalStrategies(model, strategies);
-        if (evals.length > 0) {
-          const st = marketState(model.map((c) => c.close));
-          setCombined({ pUp: combinedProbability(evals, st.weights).pUp, regimeLabel: st.label });
-        } else {
-          setCombined(null);
-        }
         const sinceTs = Date.now() - days * 86400_000;
         const idx = model.findIndex((c) => c.date.getTime() >= sinceTs);
         const start = idx < 0 ? 0 : idx;
@@ -155,6 +151,16 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
             items: disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), level: e.levels[start + k] })),
           })),
         );
+        // 逐根综合多空概率曲线
+        if (evals.length > 0) {
+          const st = marketState(model.map((c) => c.close));
+          const arr = combinedProbabilitySeries(evals, st.weights, start, model.length);
+          setProbSeries(disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), value: arr[k] })));
+          setCombined({ pUp: arr[arr.length - 1] ?? 0.5, regimeLabel: st.label });
+        } else {
+          setProbSeries([]);
+          setCombined(null);
+        }
       })
       .catch((e) => { if (!aborted) setError(e instanceof Error ? e.message : "网络错误"); })
       .finally(() => { if (!aborted) setLoading(false); });
@@ -224,16 +230,13 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
           })}
         </div>
 
-        <ChartCanvas candles={candles} lanes={lanes} loading={loading} error={error} />
+        <ChartCanvas candles={candles} lanes={lanes} probSeries={probSeries} loading={loading} error={error} />
 
         {combined ? (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-muted-foreground">综合多空</span>
-            <div className="relative h-2 w-32 overflow-hidden rounded bg-gradient-to-r from-red-200 via-slate-200 to-green-200">
-              <div className="absolute top-0 h-2 w-0.5 bg-foreground" style={{ left: `${Math.round(combined.pUp * 100)}%` }} />
-            </div>
+            <span className="text-muted-foreground">当前综合多空</span>
             <span className={cn("font-semibold", pLabel(combined.pUp).cls)}>{pLabel(combined.pUp).text} {Math.round(combined.pUp * 100)}%</span>
-            <span className="text-muted-foreground">· {combined.regimeLabel}</span>
+            <span className="text-muted-foreground">· {combined.regimeLabel} · 图中绿/红曲线 = 每根 K 线的多空概率（以 50% 为界）</span>
           </div>
         ) : null}
 
@@ -254,11 +257,12 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
   );
 }
 
-function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; lanes: Lane[]; loading: boolean; error: string | null }) {
+function ChartCanvas({ candles, lanes, probSeries, loading, error }: { candles: Candle[]; lanes: Lane[]; probSeries: { time: string; value: number }[]; loading: boolean; error: string | null }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const probSeriesRef = useRef<ISeriesApi<"Baseline"> | null>(null);
   const laneRefs = useRef<Partial<Record<StrategyCategory, ISeriesApi<"Histogram">>>>({});
   const clean = useMemo(() => sanitizeCandles(candles), [candles]);
 
@@ -266,7 +270,7 @@ function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; la
     if (!containerRef.current) return;
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,
-      height: 460,
+      height: 540,
       layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor: "#64748b" },
       grid: { vertLines: { color: "#f1f5f9" }, horzLines: { color: "#f1f5f9" } },
       rightPriceScale: { borderColor: "#e2e8f0" },
@@ -278,10 +282,21 @@ function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; la
     candleSeriesRef.current = chart.addSeries(CandlestickSeries, {
       upColor: UP_COLOR, downColor: DOWN_COLOR, borderUpColor: UP_COLOR, borderDownColor: DOWN_COLOR, wickUpColor: UP_COLOR, wickDownColor: DOWN_COLOR,
     });
-    chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.05, bottom: 0.45 } });
+    chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.04, bottom: 0.56 } });
+
+    // 逐根综合多空概率（以 0.5 为界，上方绿=偏多、下方红=偏空）
+    probSeriesRef.current = chart.addSeries(BaselineSeries, {
+      priceScaleId: "prob",
+      baseValue: { type: "price", price: 0.5 },
+      topLineColor: "rgba(22,163,74,1)", topFillColor1: "rgba(22,163,74,0.28)", topFillColor2: "rgba(22,163,74,0.04)",
+      bottomLineColor: "rgba(220,38,38,1)", bottomFillColor1: "rgba(220,38,38,0.04)", bottomFillColor2: "rgba(220,38,38,0.28)",
+      lineWidth: 2,
+      priceFormat: { type: "custom", formatter: (v: number) => `${(v * 100).toFixed(0)}%`, minMove: 0.01 },
+    });
+    chart.priceScale("prob").applyOptions({ scaleMargins: { top: 0.46, bottom: 0.36 } });
 
     volumeSeriesRef.current = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume", color: "#94a3b8" });
-    chart.priceScale("volume").applyOptions({ scaleMargins: { top: 0.58, bottom: 0.30 } });
+    chart.priceScale("volume").applyOptions({ scaleMargins: { top: 0.66, bottom: 0.24 } });
 
     for (const cat of LANE_ORDER) {
       const s = chart.addSeries(HistogramSeries, { priceScaleId: `lane_${cat}`, lastValueVisible: false, priceLineVisible: false });
@@ -301,9 +316,19 @@ function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; la
       chartRef.current = null;
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
+      probSeriesRef.current = null;
       laneRefs.current = {};
     };
   }, []);
+
+  useEffect(() => {
+    if (!probSeriesRef.current) return;
+    const m = new Map(probSeries.map((p) => [p.time, p.value]));
+    // 与 clean 对齐（缺失的根跳过，避免时间不在序列中）
+    probSeriesRef.current.setData(
+      clean.filter((c) => m.has(c.time)).map((c) => ({ time: c.time as Time, value: m.get(c.time) as number })),
+    );
+  }, [clean, probSeries]);
 
   useEffect(() => {
     if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
@@ -325,7 +350,7 @@ function ChartCanvas({ candles, lanes, loading, error }: { candles: Candle[]; la
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="h-[460px] w-full" />
+      <div ref={containerRef} className="h-[540px] w-full" />
       {loading ? <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">加载中…</div> : null}
       {error ? <div className="absolute inset-0 flex items-center justify-center text-sm text-red-600">{error}</div> : null}
       {!loading && !error && candles.length === 0 ? <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">暂无数据</div> : null}
