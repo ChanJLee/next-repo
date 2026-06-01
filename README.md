@@ -13,19 +13,36 @@
 - 同一规则冷却去重，防止刷屏
 - 飞书自定义机器人 + 签名校验，消息以 interactive card 形式发送
 
+## 运行环境要求
+
+| 依赖 | 版本 | 说明 |
+|------|------|------|
+| Node.js | **≥ 18.17**（建议 20 LTS） | Next.js 14 要求；版本过低会启动报错 |
+| pnpm | **≥ 8**（建议用 corepack） | 本项目用 pnpm，仓库带 `pnpm-lock.yaml` |
+| 数据库 | 本地 **SQLite**（零安装，文件型） | 由 Prisma 自动建库；生产可选 Turso（见“环境变量”） |
+
+> 没装 pnpm：`corepack enable pnpm`（Node 自带 corepack），或 `npm i -g pnpm`。
+
 ## 快速开始
 
 ```bash
-# 1. 安装依赖
+# 1. 配置环境变量（必须！缺 .env 会导致 Prisma / 启动报错）
+cp .env.example .env
+#   最少要有 DATABASE_URL；其余可留默认 / 留空（见“环境变量”）
+
+# 2. 安装依赖（postinstall 会自动 prisma generate）
 pnpm install
 
-# 2. 初始化数据库（已在安装过程中自动 generate）
+# 3. 初始化本地数据库（按 DATABASE_URL 建 SQLite 文件 + 建表）
+mkdir -p data        # 确保 DATABASE_URL 指向的目录存在
 pnpm db:push
 
-# 3. 启动 dev
+# 4. 启动 dev
 pnpm dev
 # → http://localhost:3000
 ```
+
+> 在新机器上最常见的报错：**没有 `.env`**（缺 `DATABASE_URL`）、**没跑 `pnpm db:push`**、或 **`data/` 目录不存在**。按上面 4 步走即可。
 
 第一次打开后：
 
@@ -83,10 +100,17 @@ scripts/*.plist                  # launchd 模板
 
 ## 环境变量
 
-```
-DATABASE_URL=file:../data/dev.db
-CRON_SECRET=local-dev-secret-change-me   # cron 接口校验，强烈建议改成随机串
-```
+复制 `.env.example` 为 `.env` 后按需填写。`DATABASE_URL` 必填，其余可留默认/留空。
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `DATABASE_URL` | ✅ | 本地 SQLite 路径，默认 `file:../data/dev.db`（相对 `prisma/` 解析 → 项目根 `data/`）。**务必先 `mkdir -p data` 再 `pnpm db:push`** |
+| `CRON_SECRET` | 建议 | `/api/cron/check` 校验头 `x-cron-secret`；本地随便填，部署务必改随机串 |
+| `NEXT_PUBLIC_AUTH_USER_HASH`<br>`NEXT_PUBLIC_AUTH_PASS_HASH` | 可选 | 前端登录用户名/密码的 **SHA-256 哈希**。两个都留空 = **关闭登录**（本地开发免登录）。注意是 `NEXT_PUBLIC_`，**构建期注入，改了要重启 dev / 重新构建**。生成命令见 `.env.example` 注释 |
+| `STOOQ_APIKEY` | 可选 | Stooq CSV API Key，批量回填历史 K 线时限额更高；不填也能用 |
+| `TURSO_DATABASE_URL`<br>`TURSO_AUTH_TOKEN` | 仅生产 | 设置后走 libSQL 连远端 Turso（Vercel 用）；**本地不要设**，留空即用上面的本地 SQLite |
+
+> 登录：`NEXT_PUBLIC_AUTH_*` 留空时整站免登录，方便本地跑；要启用就按 `.env.example` 里的命令生成哈希填进去。
 
 ## 注意事项
 
