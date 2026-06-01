@@ -184,6 +184,35 @@ export function combinedProbability(
   return { pUp: sigmoid(total), logodds: total, byCategory };
 }
 
+/**
+ * 逐根 K 线的综合多空概率序列：用每根当时各策略的级别 + 历史命中率权重 + 分类权重，
+ * 算出该根的 P(多)。用于在图上画概率曲线。
+ * 注：命中率是全历史估计（含该根之后的数据），属于"事后视角"的展示，非严格无未来函数的回测。
+ */
+export function combinedProbabilitySeries(
+  evals: StratEval[],
+  weights: Record<StrategyCategory, number>,
+  fromIdx: number,
+  toIdx: number,
+): number[] {
+  const byCat = CATS.map((cat) => ({ cat, members: evals.filter((e) => e.category === cat) })).filter((g) => g.members.length > 0);
+  const out: number[] = [];
+  for (let i = fromIdx; i < toIdx; i++) {
+    let total = 0;
+    for (const { cat, members } of byCat) {
+      let sum = 0, n = 0;
+      for (const m of members) {
+        const lv = m.levels[i];
+        if (lv === "long") { sum += logit(clamp(m.accLong)); n++; }
+        else if (lv === "short") { sum += -logit(clamp(m.accShort)); n++; }
+      }
+      if (n > 0) total += (weights[cat] ?? 1) * (sum / n);
+    }
+    out.push(sigmoid(total));
+  }
+  return out;
+}
+
 export interface LaneItem { time: string; long: number; short: number }
 export interface CategoryLane { category: StrategyCategory; count: number; items: LaneItem[] }
 
