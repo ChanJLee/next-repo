@@ -10,6 +10,7 @@ import { SymbolChartPanel } from "./_components/chart-panel";
 import { BackfillButton } from "./_components/backfill-button";
 import { StrategiesPanel } from "./_components/strategies-panel";
 import { MarketModelPanel } from "./_components/market-model-panel";
+import { PositionSignalsPanel } from "./_components/position-signals-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,8 @@ export default async function SymbolDetailPage({ params }: { params: { id: strin
       </div>
 
       <SymbolChartPanel symbolId={sym.id} ticker={sym.ticker} strategies={enabledStrategies} />
+
+      <PositionSignalsPanel symbolId={sym.id} />
 
       <MarketModelPanel symbolId={sym.id} strategies={enabledStrategies} />
 

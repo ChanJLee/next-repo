@@ -110,6 +110,30 @@ pnpm model:eval data/model-params.fitted.json
 - 数据从 691→18253 行后，小数据时的过拟合（样本外 −0.106）消失 → 转为 **+0.0026**：更多复权数据
   并未变出更大边际，但消除了过拟合、证明这点弱边际能泛化。
 
+## 持仓状态 / 止盈·买入信号
+
+因为**日线方向≈随机**（实测 1 日 AUC≈0.5，预测不了明天涨跌），系统不做方向预测，改为
+「标注当前状态 + 给状态提示」。逻辑在 `src/lib/signals/position.ts`，面板在
+`position-signals-panel.tsx`：
+
+- **状态标注**（客观描述）：趋势结构（价/MA50/MA200 排列）、位置乖离、RSI 动能、波动率分位。
+- **状态提示**（非买卖指令）：
+  - 止盈倾向：九转见顶(TD13)、超买拉伸（RSI≥70 且远离均线）。
+  - 买入倾向：九转见底(TD13)、升势回调超卖（价在 MA200 上方但 RSI≤35）。
+- 每个提示旁直接显示**历史 edge**，来源是信号回测。
+
+**信号可靠度回测**（`scripts/backtest-signals.ts`，走查因果、无未来函数）：
+
+```bash
+pnpm exec tsx scripts/backtest-signals.ts              # 本地 watchlist 标的
+pnpm exec tsx scripts/backtest-signals.ts --universe   # 内置 34 只多样化标的池(Stooq)
+pnpm exec tsx scripts/backtest-signals.ts INTC KO XLU  # 自定义标的池
+```
+
+在 34 只多样化标的（下跌/震荡/防御/板块ETF + 少量赢家，~31 万根）上，信号后 10 日相对基准：
+止盈倾向 **−0.1~−0.3%**、买入倾向 **+0.3~+0.7%**——**边际小但方向一致**。注意：只在单边大牛股
+样本上，趋势会盖过这点边际（edge≈0），故 `SIGNAL_RELIABILITY` 用多样化样本而非 watchlist 标定。
+
 ## 关键文件
 
 ```
