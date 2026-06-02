@@ -1,5 +1,9 @@
 import type { Candle } from "./yahoo";
 
+// 内置兜底 apikey：当未通过参数 / cookie / 环境变量提供时使用，让生产环境开箱即用。
+// ⚠️ 写死在源码里会随 git 公开，视为已暴露的低敏感 key；要轮换就改这里或用环境变量覆盖。
+const DEFAULT_STOOQ_APIKEY = "cnIwux20kQiBl6gT9SroYPG7DvOAMU3j";
+
 /**
  * 把美股 ticker 转换为 Stooq 的命名（小写 + .us 后缀；点号变破折号，比如 BRK.B → brk-b.us）。
  */
@@ -12,8 +16,8 @@ function fmtDate(d: Date): string {
 }
 
 /**
- * 从 Stooq 拉日线 CSV。日期范围接口需要免费 apikey（参数传入；
- * 不传则用 process.env.STOOQ_APIKEY 作为兜底，再退化到无 key 调用）。
+ * 从 Stooq 拉日线 CSV。日期范围接口需要免费 apikey：
+ * 优先级 参数 > process.env.STOOQ_APIKEY > 内置 DEFAULT_STOOQ_APIKEY。
  * CSV 格式：Date,Open,High,Low,Close,Volume
  */
 export async function getDailyCandlesFromStooq(
@@ -23,7 +27,7 @@ export async function getDailyCandlesFromStooq(
 ): Promise<Candle[]> {
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400_000);
-  const key = apikey ?? process.env.STOOQ_APIKEY;
+  const key = apikey ?? process.env.STOOQ_APIKEY ?? DEFAULT_STOOQ_APIKEY;
   let url = `https://stooq.com/q/d/l/?s=${stooqSymbol(ticker)}&d1=${fmtDate(start)}&d2=${fmtDate(end)}&i=d`;
   if (key) url += `&apikey=${encodeURIComponent(key)}`;
 
