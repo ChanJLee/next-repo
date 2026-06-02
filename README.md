@@ -72,6 +72,31 @@ launchctl unload ~/Library/LaunchAgents/com.stockmonitor.check.plist
 - 用 `yahoo-finance2` 拉雅虎财经的免费行情，**约 15 分钟延迟**
 - 无需 API Key
 - 日内信号建议接 Polygon/IEX Cloud 等付费源（替换 `src/lib/data/yahoo.ts` 即可）
+- **复权**：`yahoo-chart.ts` 用 `adjclose` 反推复权 OHLC（拆股+分红都调整），消除拆股假跳空。
+  Stooq CSV 是未复权源，仅作兜底；要长历史建模请用复权重灌脚本。
+
+## 概率模型拟合（量化好坏 + 进化因子权重）
+
+校准层 = 对 9 个因子的逻辑回归：`logit(P多)=logit(baseRate)+clampTilt(Σ wₖ·tanh(fₖ))`。
+权重 `DEFAULT_MODEL_PARAMS`（`market-model.ts`）可被进化拟合。完整闭环：
+
+```bash
+# 0) 先用复权长历史重灌缓存（修正拆股/分红 + 拉长；Yahoo 限流时脚本会自动退避重试）
+pnpm data:rebackfill              # 或 pnpm data:rebackfill AAPL SPY QQQM
+
+# 1) 走查式预计算特征（点-时、无未来函数，写 data/feature-cache.json，慢、只跑一次）
+pnpm model:featurize
+
+# 2) 差分进化拟合权重：每标的前 70% 训练、后 30% 样本外验证 + L2 正则防过拟合
+pnpm model:fit                    # 末尾打印可直接粘贴的 DEFAULT_MODEL_PARAMS
+
+# 3) 给任意参数打分（headline = 样本外 Brier-skill，>0 才比"永远报基准率"强）
+pnpm model:eval                   # 评当前 DEFAULT_MODEL_PARAMS
+pnpm model:eval data/model-params.fitted.json
+```
+
+改了 `market-model.ts` 的权重后跑 `pnpm model:eval` 即可立刻量化好坏（无需重跑 featurize，
+除非动了特征工程）。指标：Brier-skill（概率校准）、AUC（方向排序）、校准分桶。
 
 ## 关键文件
 

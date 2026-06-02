@@ -11,6 +11,10 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "check:run": "tsx scripts/run-check.ts",
+    "data:rebackfill": "tsx scripts/rebackfill.ts",
+    "model:featurize": "tsx scripts/featurize.ts",
+    "model:fit": "tsx scripts/fit-model.ts",
+    "model:eval": "tsx scripts/eval-model.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

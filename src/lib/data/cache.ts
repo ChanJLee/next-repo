@@ -102,6 +102,33 @@ async function upsertCandles(symbolId: number, candles: Candle[]): Promise<{ ins
   return { inserted: toInsert.length, updated: recent.length };
 }
 
+/**
+ * 全量替换某标的的全部 K 线（用于「回填历史」按钮）。
+ * 整段 delete + createMany，使复权因子的变化（拆股/分红后）能重新作用到所有历史根，
+ * 而不像增量 upsert 那样只补缺失。数据异常少（<50 根）时退回增量，避免误清库。
+ */
+async function replaceAllCandles(symbolId: number, candles: Candle[]): Promise<{ deleted: number; inserted: number }> {
+  const byDay = new Map<number, Candle>();
+  for (const c of candles) {
+    if (![c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)) continue;
+    const day = toUtcDay(c.date);
+    byDay.set(day.getTime(), { ...c, date: day });
+  }
+  const rows = Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
+  if (rows.length < 50) {
+    const { inserted } = await upsertCandles(symbolId, rows);
+    return { deleted: 0, inserted };
+  }
+  const before = await prisma.candle.count({ where: { symbolId } });
+  await prisma.$transaction([
+    prisma.candle.deleteMany({ where: { symbolId } }),
+    prisma.candle.createMany({
+      data: rows.map((c) => ({ symbolId, date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume })),
+    }),
+  ]);
+  return { deleted: before, inserted: rows.length };
+}
+
 interface CacheCandlesOpts {
   symbolId: number;
   ticker: string;
@@ -159,16 +186,23 @@ function toCandle(c: {
 
 /**
  * 主动预填充：把指定股票的多年历史一次性灌入数据库。
+ * replace=true 时整段复权替换（「回填历史」按钮用，拉全量并重新复权）；
+ * 否则增量 upsert（仅补缺失 + 更新最近几根）。
  */
 export async function backfillCandles(
   symbolId: number,
   ticker: string,
   days: number = 730,
   stooqApikey?: string,
-): Promise<{ inserted: number; updated: number; fetched: number; source: CandleSource }> {
+  replace = false,
+): Promise<{ inserted: number; updated: number; fetched: number; source: CandleSource; replaced: boolean }> {
   const { candles, source } = await fetchCandlesFromAny(ticker, days, stooqApikey);
+  if (replace) {
+    const { deleted, inserted } = await replaceAllCandles(symbolId, candles);
+    return { inserted, updated: deleted, fetched: candles.length, source, replaced: true };
+  }
   const { inserted, updated } = await upsertCandles(symbolId, candles);
-  return { inserted, updated, fetched: candles.length, source };
+  return { inserted, updated, fetched: candles.length, source, replaced: false };
 }
 
 /**

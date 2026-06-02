@@ -36,7 +36,7 @@ const CATEGORY_HORIZON: Record<StrategyCategory, number> = {
   pattern: 5,
 };
 const PSEUDO = 8; // Beta 平滑伪计数：样本不足时把准确率收缩向 0.5
-const CALIBRATION_HORIZON = 10; // 概率定义：未来 N 个交易日收盘价更高
+export const CALIBRATION_HORIZON = 10; // 概率定义：未来 N 个交易日收盘价更高
 // 走查式样本外回测（scripts/backtest-model.ts）结论：在日线单标的上，
 // 趋势强度 / 乖离对未来 10 日方向几乎没有稳定边际，且「强趋势 + 高乖离」的
 // 极端状态反而轻微反预测（均值回归）。唯一站得住的弱信号是短周期 20 日动量。
@@ -46,10 +46,38 @@ const CALIBRATION_HORIZON = 10; // 概率定义：未来 N 个交易日收盘价
 // （全历史微正、近段窗口转负），但「状态条件化动量」——趋势态(Hurst>0.5)顺动量、
 // 震荡态(<0.5)反动量——在 5~10 日窗口是所有信号里最稳的（AUC≈0.55）。
 // 即便如此边际仍很弱，所以偏移系数保持小量级、MAX_TILT 收窄，避免虚假自信。
-const BETA_MOMENTUM = 0.15; // 状态条件化动量的偏移系数（log-odds，弱量级）
-const BETA_REVERSION = 0.04; // 乖离的反向小幅修正（过度拉伸轻微看回归）
-const MAX_TILT = 0.22; // 相对基准率的最大 log-odds 偏移，避免虚假自信
 const CATS: StrategyCategory[] = ["trend", "reversion", "pattern"];
+
+// ---- 校准层参数（可被拟合器进化）----------------------------------------
+// 概率定义：logit(P多) = logit(baseRate) + clampTilt(Σ_k weights[k]·tanh(feature_k), maxTilt)
+// feature 顺序见 FEATURE_NAMES / buildFeature。每个权重就是「该因子的 log-odds 贡献系数」。
+// 默认值复现历史「谦逊」模型：只用状态条件化动量(+0.15) 与 20 日乖离的反向修正(-0.04)，
+// 其余因子权重为 0；maxTilt 把偏移限制在基准率附近窄带。
+// 用 scripts/featurize.ts + scripts/fit-model.ts 走查样本外进化这些权重。
+export const FEATURE_NAMES = [
+  "evidence", // 0 策略证据（分类加权 log-odds）
+  "ret5",     // 1 5 日标准化动量
+  "ret20",    // 2 20 日标准化动量
+  "ext20",    // 3 距 20 日均线乖离
+  "ext60",    // 4 距 60 日均线乖离
+  "rsi",      // 5 RSI 偏离 50
+  "extension",// 6 乖离幅度（≥0）
+  "overheat", // 7 RSI 过热（≥0）
+  "regimeMom",// 8 状态条件化动量（趋势态顺势 / 震荡态反向）
+] as const;
+export const NUM_FEATURES = FEATURE_NAMES.length;
+
+export interface ModelParams {
+  weights: number[]; // 与 FEATURE_NAMES 等长，逐因子 log-odds 权重（作用于 tanh(feature)）
+  maxTilt: number;   // 相对基准率的最大 |log-odds| 偏移
+}
+
+// 由 scripts/fit-model.ts 在 ~1.8 万行复权长历史（9 标的、走查样本外）上差分进化得到。
+// 样本外 Brier-skill 较旧手调值 +0.0009、且跨 seed/λ 稳定；权重小、maxTilt 收窄，仍属"谦逊"。
+export const DEFAULT_MODEL_PARAMS: ModelParams = {
+  weights: [0.0018, -0.0442, 0.0139, 0.0249, 0.0127, 0.0343, 0.0266, 0.027, 0.018],
+  maxTilt: 0.1498,
+};
 
 export interface StratEval {
   id: number;
@@ -284,7 +312,7 @@ interface CalibrationModel {
   baseRate: number;
 }
 
-function buildFeature(
+export function buildFeature(
   candles: Candle[],
   evals: StratEval[],
   weights: Record<StrategyCategory, number>,
@@ -347,31 +375,44 @@ function buildCalibrationModel(
   };
 }
 
-function calibratedProbability(model: CalibrationModel, index: number): number {
-  const target = model.features[index];
-  // base rate（历史无条件上涨率）就是没有任何边际时的最佳猜测
-  const anchor = clamp(model.baseRate);
-  if (!target) return anchor;
+// 逐因子加权求和 → log-odds 偏移（每个因子先过 tanh 做软饱和）
+export function tiltFromFeatures(feature: number[], weights: number[]): number {
+  let s = 0;
+  const n = Math.min(feature.length, weights.length);
+  for (let k = 0; k < n; k++) s += weights[k] * Math.tanh(feature[k] ?? 0);
+  return s;
+}
 
-  // feature[8] = 状态条件化动量（趋势态顺势/震荡态反向，样本外最稳的弱信号）
-  // feature[3] = 距 20 日均线乖离（过度拉伸时轻微反向修正）
-  const regimeMomentum = target[8] ?? 0;
-  const extension = target[3] ?? 0;
-  const tilt = clampTilt(BETA_MOMENTUM * Math.tanh(regimeMomentum) - BETA_REVERSION * Math.tanh(extension));
+/**
+ * 把单点特征 + 点-时基准率 + 模型参数映射为 P(多)。
+ * 这是校准层的唯一实现：图表、回测、拟合器都走它，保证不漂移。
+ */
+export function probabilityFromFeature(
+  feature: number[] | null,
+  baseRate: number,
+  params: ModelParams = DEFAULT_MODEL_PARAMS,
+): number {
+  const anchor = clamp(baseRate); // 没有任何边际时的最佳猜测就是历史上涨率
+  if (!feature) return anchor;
+  const m = params.maxTilt;
+  const tilt = Math.min(m, Math.max(-m, tiltFromFeatures(feature, params.weights)));
   return clamp(sigmoid(logit(anchor) + tilt));
 }
 
-const clampTilt = (x: number) => Math.min(MAX_TILT, Math.max(-MAX_TILT, x));
+function calibratedProbability(model: CalibrationModel, index: number, params: ModelParams = DEFAULT_MODEL_PARAMS): number {
+  return probabilityFromFeature(model.features[index], model.baseRate, params);
+}
 
 export function combinedProbability(
   candles: Candle[],
   evals: StratEval[],
   weights: Record<StrategyCategory, number> = { trend: 1, reversion: 1, pattern: 1 },
+  params: ModelParams = DEFAULT_MODEL_PARAMS,
 ): CombinedRead {
   const index = candles.length - 1;
   const { total, byCategory } = categoryReadsAt(evals, weights, index);
   const model = buildCalibrationModel(candles, evals, weights);
-  return { pUp: calibratedProbability(model, index), logodds: total, byCategory };
+  return { pUp: calibratedProbability(model, index, params), logodds: total, byCategory };
 }
 
 /**
@@ -385,11 +426,12 @@ export function combinedProbabilitySeries(
   weights: Record<StrategyCategory, number>,
   fromIdx: number,
   toIdx: number,
+  params: ModelParams = DEFAULT_MODEL_PARAMS,
 ): number[] {
   const model = buildCalibrationModel(candles, evals, weights);
   const out: number[] = [];
   for (let i = fromIdx; i < toIdx; i++) {
-    out.push(calibratedProbability(model, i));
+    out.push(calibratedProbability(model, i, params));
   }
   return out;
 }

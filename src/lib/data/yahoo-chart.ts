@@ -20,6 +20,7 @@ interface YahooChartResp {
           close?: (number | null)[];
           volume?: (number | null)[];
         }>;
+        adjclose?: Array<{ adjclose?: (number | null)[] }>;
       };
     }>;
     error?: { code?: string; description?: string } | null;
@@ -34,12 +35,14 @@ function rangeForDays(days: number): string {
   if (days <= 365) return "1y";
   if (days <= 730) return "2y";
   if (days <= 1825) return "5y";
-  return "10y";
+  if (days <= 3650) return "10y";
+  return "max";
 }
 
 export async function getDailyCandlesFromYahooChart(ticker: string, days: number = 365): Promise<Candle[]> {
   const range = rangeForDays(days);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=1d`;
+  // events=div|split 让接口附带复权所需的 adjclose（拆股+分红调整后的收盘价）。
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=1d&events=div%7Csplit`;
   const res = await fetch(url, {
     headers: { "User-Agent": YAHOO_UA, Accept: "application/json" },
     cache: "no-store",
@@ -55,16 +58,21 @@ export async function getDailyCandlesFromYahooChart(ticker: string, days: number
 
   const ts = r.timestamp;
   const q = r.indicators.quote[0];
+  const adj = r.indicators.adjclose?.[0]?.adjclose;
   const out: Candle[] = [];
   for (let i = 0; i < ts.length; i++) {
     const close = q.close?.[i];
     if (close == null) continue;
+    // 复权因子 = adjclose / close（既含拆股也含分红）。对全部 OHLC 用同一因子缩放，
+    // 既消除拆股跳空、又消除分红台阶，且保持 high≥close≥low 等内部关系。
+    const a = adj?.[i];
+    const f = a != null && close > 0 ? a / close : 1;
     out.push({
       date: new Date(ts[i] * 1000),
-      open: q.open?.[i] ?? close,
-      high: q.high?.[i] ?? close,
-      low: q.low?.[i] ?? close,
-      close,
+      open: (q.open?.[i] ?? close) * f,
+      high: (q.high?.[i] ?? close) * f,
+      low: (q.low?.[i] ?? close) * f,
+      close: close * f,
       volume: q.volume?.[i] ?? 0,
     });
   }
