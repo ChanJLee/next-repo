@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createChart,
+  createSeriesMarkers,
   CandlestickSeries,
   HistogramSeries,
   BaselineSeries,
   ColorType,
   type IChartApi,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
+  type SeriesMarker,
   type Time,
 } from "lightweight-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +22,7 @@ import { RefreshCw } from "lucide-react";
 import { CATEGORY_LABEL, STRATEGY_CATEGORY, type StrategyCategory, type StrategyKind } from "@/lib/strategies/types";
 import type { Candle as ModelCandle } from "@/lib/data/yahoo";
 import { evalStrategies, combinedProbability, combinedProbabilitySeries, marketState, type ModelStrategy } from "./market-model";
+import { computeTDSequential } from "@/lib/indicators/nine-turn";
 
 interface Candle {
   time: string;
@@ -31,6 +35,7 @@ interface Candle {
 
 interface LaneItem { time: string; level: string }
 interface Lane { category: StrategyCategory; name: string; items: LaneItem[] }
+interface NineTurnPoint { time: string; buy13: boolean; sell13: boolean }
 
 type ChartRange = "1w" | "1m" | "3m" | "1y" | "2y" | "5y";
 const RANGES: { value: ChartRange; label: string }[] = [
@@ -101,6 +106,8 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
   const [refreshTick, setRefreshTick] = useState(0);
   const [combined, setCombined] = useState<{ pUp: number; regimeLabel: string } | null>(null);
   const [probSeries, setProbSeries] = useState<{ time: string; value: number }[]>([]);
+  const [nineTurn, setNineTurn] = useState<NineTurnPoint[]>([]);
+  const [showNine, setShowNine] = useState(true);
 
   const grouped = useMemo(() => {
     const g: Record<StrategyCategory, ModelStrategy[]> = { trend: [], reversion: [], pattern: [] };
@@ -130,7 +137,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
       .then(async (res) => {
         const json = await readJson(res);
         if (aborted) return;
-        if (!res.ok) { setError(json.error ?? `HTTP ${res.status}`); setCandles([]); setLaneSource([]); return; }
+        if (!res.ok) { setError(json.error ?? `HTTP ${res.status}`); setCandles([]); setLaneSource([]); setNineTurn([]); return; }
         const byDay = new Map<string, ModelCandle>();
         for (const c of json.candles ?? []) {
           if (![c.open, c.high, c.low, c.close].every((v: unknown) => typeof v === "number" && Number.isFinite(v))) continue;
@@ -143,6 +150,9 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         const start = idx < 0 ? 0 : idx;
         const disp = model.slice(start);
         setCandles(disp.map((c) => ({ time: c.date.toISOString().slice(0, 10), open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume })));
+        // TD Sequential：用全量序列计算（Countdown 13 需要长历史才准），再切到展示区间，只保留 13 信号
+        const td = computeTDSequential(model);
+        setNineTurn(disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), buy13: td.buy13[start + k], sell13: td.sell13[start + k] })));
         setLaneSource(
           evals.map((e) => ({
             id: e.id,
@@ -203,6 +213,14 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
               {r.label}
             </Button>
           ))}
+          <Button
+            variant={showNine ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowNine((v) => !v)}
+            title="TD Sequential：九转 Setup(9) 后再数 Countdown 到 13，标出罕见的强反转点"
+          >
+            TD13
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setRefreshTick((n) => n + 1)} disabled={loading} title="强制刷新（绕过缓存）">
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
@@ -230,7 +248,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
           })}
         </div>
 
-        <ChartCanvas candles={candles} lanes={lanes} probSeries={probSeries} loading={loading} error={error} />
+        <ChartCanvas candles={candles} lanes={lanes} probSeries={probSeries} nineTurn={showNine ? nineTurn : []} loading={loading} error={error} />
 
         {combined ? (
           <div className="mt-2 space-y-1 text-xs">
@@ -242,6 +260,12 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
             <div className="text-muted-foreground">
               图下概率曲线：历史拟合 / 模型校准，用来看概率是否和后续走势同向。
             </div>
+          </div>
+        ) : null}
+
+        {showNine ? (
+          <div className="mt-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">TD Sequential</span>：九转 Setup(9) 完成后再数 Countdown 到 13 才标记——<span className="text-green-600">▲TD13（底部）</span>出现在 K 线下方、<span className="text-red-600">▼TD13（顶部）</span>在上方。13 比 9 罕见得多，是更强的潜在反转提示。
           </div>
         ) : null}
 
@@ -262,12 +286,13 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
   );
 }
 
-function ChartCanvas({ candles, lanes, probSeries, loading, error }: { candles: Candle[]; lanes: Lane[]; probSeries: { time: string; value: number }[]; loading: boolean; error: string | null }) {
+function ChartCanvas({ candles, lanes, probSeries, nineTurn, loading, error }: { candles: Candle[]; lanes: Lane[]; probSeries: { time: string; value: number }[]; nineTurn: NineTurnPoint[]; loading: boolean; error: string | null }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const probSeriesRef = useRef<ISeriesApi<"Baseline"> | null>(null);
+  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const laneRefs = useRef<Partial<Record<StrategyCategory, ISeriesApi<"Histogram">>>>({});
   const clean = useMemo(() => sanitizeCandles(candles), [candles]);
 
@@ -288,6 +313,8 @@ function ChartCanvas({ candles, lanes, probSeries, loading, error }: { candles: 
       upColor: UP_COLOR, downColor: DOWN_COLOR, borderUpColor: UP_COLOR, borderDownColor: DOWN_COLOR, wickUpColor: UP_COLOR, wickDownColor: DOWN_COLOR,
     });
     chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.04, bottom: 0.56 } });
+    // 神奇九转的计数数字挂在 K 线上下（markers）
+    markersRef.current = createSeriesMarkers(candleSeriesRef.current, []);
 
     // 逐根综合多空概率（以 0.5 为界，上方绿=偏多、下方红=偏空）
     probSeriesRef.current = chart.addSeries(BaselineSeries, {
@@ -322,6 +349,7 @@ function ChartCanvas({ candles, lanes, probSeries, loading, error }: { candles: 
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
       probSeriesRef.current = null;
+      markersRef.current = null;
       laneRefs.current = {};
     };
   }, []);
@@ -341,6 +369,22 @@ function ChartCanvas({ candles, lanes, probSeries, loading, error }: { candles: 
     volumeSeriesRef.current.setData(clean.map((c) => ({ time: c.time as Time, value: c.volume, color: c.close >= c.open ? `${UP_COLOR}55` : `${DOWN_COLOR}55` })));
     if (clean.length > 0) chartRef.current?.timeScale().fitContent();
   }, [clean]);
+
+  useEffect(() => {
+    if (!markersRef.current) return;
+    const m = new Map(nineTurn.map((p) => [p.time, p]));
+    const markers: SeriesMarker<Time>[] = [];
+    for (const c of clean) {
+      const p = m.get(c.time);
+      if (!p) continue;
+      if (p.buy13) {
+        markers.push({ time: c.time as Time, position: "belowBar", color: UP_COLOR, shape: "arrowUp", text: "TD13", size: 2 });
+      } else if (p.sell13) {
+        markers.push({ time: c.time as Time, position: "aboveBar", color: DOWN_COLOR, shape: "arrowDown", text: "TD13", size: 2 });
+      }
+    }
+    markersRef.current.setMarkers(markers);
+  }, [clean, nineTurn]);
 
   useEffect(() => {
     for (const cat of LANE_ORDER) {
