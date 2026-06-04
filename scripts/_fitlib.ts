@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   probabilityFromFeature,
+  DEFAULT_MODEL_PARAMS,
   type ModelParams,
 } from "../src/app/watchlist/[id]/_components/market-model";
 
@@ -130,4 +131,67 @@ export function printScorecard(label: string, sc: Scorecard): void {
   console.log(`  Brier(model)=${sc.brierModel}  Brier(base)=${sc.brierBase}  skill=${sc.skill}  AUC=${sc.auc}  logloss=${sc.logloss}`);
   console.log("  校准分桶（pMax 越高 upRate 应越高、nPred≈upRate 表示校准好）：");
   for (const b of sc.buckets) console.log(`    p∈[${b.pMin},${b.pMax}]  实际涨率=${b.upRate}  预测均值=${b.nPred}  (${b.count})`);
+}
+
+// ---- 差分进化拟合（fit-model 与 cv-model 共用，保证同一优化器）-------------
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export interface FitOpts {
+  lambda?: number;  // L2 正则
+  gens?: number;
+  pop?: number;
+  seed?: number;
+  dim?: number;     // 特征权重维数；默认取 train[0].f.length
+}
+
+/**
+ * 在给定训练集上用差分进化拟合校准层权重（目标 = Brier + λ·Σw²）。
+ * 种群植入「DEFAULT_MODEL_PARAMS 零填充至 dim」作为种子，保证不劣于现状。
+ */
+export function fitWeights(train: FeatureRow[], opts: FitOpts = {}): ModelParams {
+  const NF = opts.dim ?? train[0]?.f.length ?? DEFAULT_MODEL_PARAMS.weights.length;
+  const DIM = NF + 1;
+  const LAMBDA = opts.lambda ?? 0.02;
+  const GENERATIONS = opts.gens ?? 150;
+  const POP = opts.pop ?? 48;
+  const W_LO = -1, W_HI = 1, T_LO = 0.02, T_HI = 0.6, F = 0.6, CR = 0.9;
+  const lo = (k: number) => (k < NF ? W_LO : T_LO);
+  const hi = (k: number) => (k < NF ? W_HI : T_HI);
+  const toParams = (x: number[]): ModelParams => ({ weights: x.slice(0, NF), maxTilt: x[NF] });
+  const clampDim = (x: number[]) => x.map((v, k) => Math.min(hi(k), Math.max(lo(k), v)));
+  const objective = (x: number[]): number => {
+    const params = toParams(x);
+    return brier(train, (r) => predict(r, params)) + LAMBDA * x.slice(0, NF).reduce((a, w) => a + w * w, 0);
+  };
+  const rng = mulberry32(opts.seed ?? 1);
+
+  const seed = [...DEFAULT_MODEL_PARAMS.weights];
+  while (seed.length < NF) seed.push(0);
+  const pop: number[][] = [clampDim([...seed, DEFAULT_MODEL_PARAMS.maxTilt])];
+  while (pop.length < POP) pop.push(Array.from({ length: DIM }, (_, k) => lo(k) + rng() * (hi(k) - lo(k))));
+  let fit = pop.map(objective);
+
+  for (let g = 0; g < GENERATIONS; g++) {
+    for (let i = 0; i < POP; i++) {
+      let a = i, b = i, c = i;
+      while (a === i) a = Math.floor(rng() * POP);
+      while (b === i || b === a) b = Math.floor(rng() * POP);
+      while (c === i || c === a || c === b) c = Math.floor(rng() * POP);
+      const jRand = Math.floor(rng() * DIM);
+      const trial = clampDim(pop[i].map((v, k) => (rng() < CR || k === jRand) ? pop[a][k] + F * (pop[b][k] - pop[c][k]) : v));
+      const ft = objective(trial);
+      if (ft <= fit[i]) { pop[i] = trial; fit[i] = ft; }
+    }
+  }
+  const best = fit.indexOf(Math.min(...fit));
+  const p = toParams(pop[best]);
+  return { weights: p.weights.map((w) => +w.toFixed(4)), maxTilt: +p.maxTilt.toFixed(4) };
 }

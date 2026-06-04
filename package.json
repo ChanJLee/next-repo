@@ -16,6 +16,7 @@
     "model:fit": "tsx scripts/fit-model.ts",
     "model:eval": "tsx scripts/eval-model.ts",
     "model:monitor": "tsx scripts/monitor-calibration.ts",
+    "model:cv": "tsx scripts/cv-model.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
