@@ -317,10 +317,12 @@ function categoryReadsAt(
 // mkt 为对齐到 candles 同 index 的 SPY 收盘序列；不传或当根无大盘数据 → 全 0
 // （probabilityFromFeature 用 min(len) 对齐，缺 SPY 时自动退化为基础 9 维模型）。
 export interface CrossAssetContext {
-  mkt: number[]; // 与 candles 等长、按 index 对齐的大盘（SPY）收盘价；缺失处前向填充，更早处置 0
+  mkt: number[]; // 大盘（SPY）收盘，对齐到 candles
 }
 export const CROSS_FEATURE_NAMES = ["mktTrend", "volRegime"] as const;
 export const NUM_CROSS_FEATURES = CROSS_FEATURE_NAMES.length;
+// 注：利率(TLT)/板块(XLK) 候选维做过走查实验，跨 seed/λ 样本外 Brier-skill 一致变差
+// （rateTrend 抓住 2010s 长债单边 regime，过拟合不泛化），已否决；生产维持 SPY 两维。
 
 function crossFeatures(closes: number[], mkt: number[], index: number): number[] {
   const zero = new Array(NUM_CROSS_FEATURES).fill(0);
@@ -375,7 +377,7 @@ export function buildFeature(
   const regimeSign = h == null ? 0 : Math.sign(h - 0.5);
   feature.push(clampFeature(regimeSign * feature[2]));
   // 追加跨资产条件特征（仅当提供上下文）。tiltFromFeatures 用 min(len) 对齐，
-  // 故 9 维权重作用于此 14 维特征时自动忽略尾部 → 生产模型零影响。
+  // 故 9 维权重作用于 11 维特征时自动忽略尾部 → 缺 SPY 的路径优雅退化为基础模型。
   if (cross) feature.push(...crossFeatures(closes, cross.mkt, index));
   return { rawScore: total, feature };
 }
