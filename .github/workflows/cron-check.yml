@@ -35,9 +35,28 @@ jobs:
           fi
           QUERY=""
           if [ "$FORCE" = "true" ]; then QUERY="?force=1"; fi
-          echo "calling ${CRON_URL}/api/cron/check${QUERY}"
-          curl -fsSL --max-time 240 -X POST \
+          URL="${CRON_URL}/api/cron/check${QUERY}"
+          echo "calling ${URL}"
+          # 不用 -f：让我们能在非 2xx 时拿到响应体与状态码，便于区分
+          # “应用层 401（{\"error\":\"unauthorized\"}，CRON_SECRET 不匹配）” 与
+          # “Vercel Deployment Protection 拦截（返回 SSO HTML）”。
+          BODY=$(mktemp)
+          CODE=$(curl -sS --max-time 240 -X POST \
             -H "x-cron-secret: ${CRON_SECRET}" \
             -H "Content-Type: application/json" \
-            "${CRON_URL}/api/cron/check${QUERY}"
-          echo ""
+            -o "$BODY" -w "%{http_code}" \
+            "${URL}")
+          echo "HTTP ${CODE}"
+          echo "----- response body -----"
+          cat "$BODY"; echo ""
+          echo "-------------------------"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            if [ "$CODE" = "401" ] && grep -qi "Authentication Required\|_vercel_sso\|vercel.com/sso" "$BODY"; then
+              echo "::error::401 来自 Vercel Deployment Protection（平台 SSO），请求未到达函数。请在 Vercel 项目 Settings → Deployment Protection 关闭对生产环境的保护，或配置 Protection Bypass for Automation 并在请求里带 bypass token。"
+            elif [ "$CODE" = "401" ]; then
+              echo "::error::401 来自应用（CRON_SECRET 不匹配）。请确认 GitHub Secret 的 CRON_SECRET 与 Vercel 环境变量 CRON_SECRET 完全一致，且改动后已重新部署。"
+            else
+              echo "::error::请求失败，HTTP ${CODE}（详见上方响应体）"
+            fi
+            exit 1
+          fi
