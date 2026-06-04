@@ -22,6 +22,7 @@ import {
   NUM_CROSS_FEATURES,
   FEATURE_NAMES,
   CROSS_FEATURE_NAMES,
+  alignMarketCloses,
   type CrossAssetContext,
 } from "../src/app/watchlist/[id]/_components/market-model";
 import { getDailyCandlesFromStooq } from "../src/lib/data/stooq";
@@ -57,14 +58,8 @@ async function main() {
     const strategies = s.strategies.map((st) => ({ id: st.id, name: st.name, kind: st.kind, params: st.params }));
     const n = candles.length;
 
-    // 对齐大盘收盘到该标的每根 K 线（前向填充；更早无数据处置 0）
-    const mktFull: number[] = [];
-    let lastMkt = 0;
-    for (const c of candles) {
-      const v = spyByDate.get(c.date.toISOString().slice(0, 10));
-      if (v != null && v > 0) lastMkt = v;
-      mktFull.push(lastMkt);
-    }
+    // 对齐大盘收盘到该标的每根 K 线（与 live 走同一 alignMarketCloses，口径一致）
+    const mktFull = alignMarketCloses(candles, spyByDate);
     const lastPredictable = n - 1 - HORIZON;
     if (lastPredictable < MIN_TRAIN) {
       console.log(`[${s.ticker}] 跳过：candles=${n}（不足 ${MIN_TRAIN}+${HORIZON}）`);

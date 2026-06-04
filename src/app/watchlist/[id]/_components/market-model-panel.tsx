@@ -5,7 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { CATEGORY_LABEL } from "@/lib/strategies/types";
 import type { Candle } from "@/lib/data/yahoo";
-import { evalStrategies, combinedProbability, marketState, type ModelStrategy, type CombinedRead, type MarketState } from "./market-model";
+import { evalStrategies, combinedProbability, marketState, alignMarketCloses, type ModelStrategy, type CombinedRead, type MarketState } from "./market-model";
+
+/** 拉大盘(SPY)收盘做跨资产条件特征；失败返回 null（模型自动退化为基础特征）。 */
+async function fetchMarketCloses(days: number): Promise<Map<string, number> | null> {
+  try {
+    const res = await fetch(`/api/market/candles?ticker=SPY&days=${days}`);
+    if (!res.ok) return null;
+    const j = await res.json();
+    const m = new Map<string, number>();
+    for (const p of j.closes ?? []) m.set(p.time, p.close);
+    return m.size > 0 ? m : null;
+  } catch {
+    return null;
+  }
+}
 
 // 估准确率要长历史，5 年（已回填）
 const MODEL_DAYS = 1825;
@@ -47,8 +61,12 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
         if (candles.length === 0) { setState("failed"); return; }
         const st = marketState(candles.map((c) => c.close));
         const evals = evalStrategies(candles, strategies);
+        // 跨资产条件：对齐 SPY（失败则退化为基础模型）
+        const spyMap = await fetchMarketCloses(MODEL_DAYS);
+        if (aborted) return;
+        const mkt = spyMap ? alignMarketCloses(candles, spyMap) : undefined;
         setRegime(st);
-        setRead(combinedProbability(candles, evals, st.weights));
+        setRead(combinedProbability(candles, evals, st.weights, undefined, mkt));
         setState("ready");
       })
       .catch(() => { if (!aborted) setState("failed"); });

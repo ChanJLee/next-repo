@@ -50,6 +50,21 @@ async function fetchCandlesFromAny(
   throw new Error(`所有数据源都失败: ${errors.join("; ")}`);
 }
 
+// ---- 市场参考序列（SPY 等，不入库）----------------------------------------
+// 跨资产特征需要大盘序列，但它不是 watchlist 标的、不该污染 Symbol/Candle 表。
+// 这里走进程内 TTL 缓存（热实例复用、冷启动重拉），按 ticker+days 记忆。
+const marketMemo = new Map<string, { at: number; candles: Candle[] }>();
+
+/** 拉市场参考 K 线（如 SPY），无 DB 缓存，仅进程内 TTL 记忆。 */
+export async function getMarketCandles(ticker: string, days: number, stooqApikey?: string): Promise<Candle[]> {
+  const key = `${ticker}:${days}`;
+  const hit = marketMemo.get(key);
+  if (hit && Date.now() - hit.at < candleTTL()) return hit.candles;
+  const { candles } = await fetchCandlesFromAny(ticker, days, stooqApikey);
+  marketMemo.set(key, { at: Date.now(), candles });
+  return candles;
+}
+
 /**
  * 把日期归一到 UTC 零点。各数据源给同一交易日打的时间戳不一致
  * （Stooq 用 UTC 零点、yahoo-chart 用盘中时刻），不归一会让 @@id([symbolId,date])
