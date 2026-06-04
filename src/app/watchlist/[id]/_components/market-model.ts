@@ -68,15 +68,18 @@ export const FEATURE_NAMES = [
 export const NUM_FEATURES = FEATURE_NAMES.length;
 
 export interface ModelParams {
-  weights: number[]; // 与 FEATURE_NAMES 等长，逐因子 log-odds 权重（作用于 tanh(feature)）
+  weights: number[]; // 与 [...FEATURE_NAMES, ...CROSS_FEATURE_NAMES] 等长，逐因子 log-odds 权重（作用于 tanh(feature)）
   maxTilt: number;   // 相对基准率的最大 |log-odds| 偏移
 }
 
-// 由 scripts/fit-model.ts 在 ~1.8 万行复权长历史（9 标的、走查样本外）上差分进化得到。
-// 样本外 Brier-skill 较旧手调值 +0.0009、且跨 seed/λ 稳定；权重小、maxTilt 收窄，仍属"谦逊"。
+// 由 scripts/fit-model.ts 在复权长历史（9 标的、走查样本外）上差分进化得到。
+// 11 维 = 9 基础 + 2 跨资产（mktTrend, volRegime）。跨资产把样本外 Brier-skill 再 +0.0015，
+// 主贡献是 volRegime（VIX 代理，负权重：高波动→调低涨概率），跨 seed/λ 符号稳定。
+// 末两位作用于 SPY 派生的跨资产特征；线上缺 SPY 时 probabilityFromFeature 的 min(len)
+// 会自动只用前 9 维 → 优雅退化为基础模型。
 export const DEFAULT_MODEL_PARAMS: ModelParams = {
-  weights: [0.0018, -0.0442, 0.0139, 0.0249, 0.0127, 0.0343, 0.0266, 0.027, 0.018],
-  maxTilt: 0.1498,
+  weights: [0.0141, -0.0292, 0.0155, -0.0051, 0.0111, 0.0002, 0.0757, 0.0304, -0.0101, 0.0016, -0.0437],
+  maxTilt: 0.1211,
 };
 
 export interface StratEval {
@@ -305,12 +308,53 @@ function categoryReadsAt(
   return { total, byCategory };
 }
 
+// ---- 跨资产条件特征（生产）-------------------------------------------------
+// 单标的日线方向的多数方差来自大盘 beta + 波动率 regime。引入大盘(SPY)做「条件」。
+// 走查实验里只有这两维跨 seed/λ 符号稳定、样本外为正，其余（mktMom/相对强弱/动量×平静度）
+// 是噪声，已砍掉：
+//   · mktTrend  大盘 vs 200d MA（风险偏好 on/off；权重为正）
+//   · volRegime 20d/252d 已实现波动率之比的对数（VIX 代理，>0=紧张；权重为负）
+// mkt 为对齐到 candles 同 index 的 SPY 收盘序列；不传或当根无大盘数据 → 全 0
+// （probabilityFromFeature 用 min(len) 对齐，缺 SPY 时自动退化为基础 9 维模型）。
+export interface CrossAssetContext {
+  mkt: number[]; // 大盘（SPY）收盘，对齐到 candles
+}
+export const CROSS_FEATURE_NAMES = ["mktTrend", "volRegime"] as const;
+export const NUM_CROSS_FEATURES = CROSS_FEATURE_NAMES.length;
+// 注：利率(TLT)/板块(XLK) 候选维做过走查实验，跨 seed/λ 样本外 Brier-skill 一致变差
+// （rateTrend 抓住 2010s 长债单边 regime，过拟合不泛化），已否决；生产维持 SPY 两维。
+
+function crossFeatures(closes: number[], mkt: number[], index: number): number[] {
+  const zero = new Array(NUM_CROSS_FEATURES).fill(0);
+  if (index < 20 || mkt.length !== closes.length || !(mkt[index] > 0)) return zero;
+  const mvol = dailyVolAt(mkt, index, 20);
+  const mktTrend = normalizedDistanceToMa(mkt, index, 200, mvol);
+  // 波动率 regime：20 日 vs 252 日已实现波动率之比的对数（VIX 代理；>0 紧张）
+  const rvShort = dailyVolAt(mkt, index, 20);
+  const rvLong = dailyVolAt(mkt, index, 252);
+  const volRegime = rvLong > 0 ? clampFeature(Math.log(rvShort / rvLong) / 0.5) : 0;
+  return [mktTrend, volRegime];
+}
+
+/** 把大盘收盘按日期前向填充对齐到目标 K 线序列（live 与离线 featurize 共用，保证口径一致）。 */
+export function alignMarketCloses(candles: { date: Date }[], mktByDate: Map<string, number>): number[] {
+  const out: number[] = [];
+  let last = 0;
+  for (const c of candles) {
+    const v = mktByDate.get(c.date.toISOString().slice(0, 10));
+    if (v != null && v > 0) last = v;
+    out.push(last);
+  }
+  return out;
+}
+
 export function buildFeature(
   candles: Candle[],
   evals: StratEval[],
   weights: Record<StrategyCategory, number>,
   index: number,
   evidenceOverride?: number, // 点-时证据（PIT 上下文提供）；缺省则用 evals 的全样本命中率（离线切片调用本就点-时）
+  cross?: CrossAssetContext,  // 跨资产上下文；不传 → 仅产出 9 维基础特征（生产路径不变）
 ): { rawScore: number; feature: number[] | null } {
   const closes = candles.map((c) => c.close);
   if (index < 60) return { rawScore: 0, feature: null };
@@ -332,6 +376,9 @@ export function buildFeature(
   const h = hurstExponent(closes.slice(0, index + 1));
   const regimeSign = h == null ? 0 : Math.sign(h - 0.5);
   feature.push(clampFeature(regimeSign * feature[2]));
+  // 追加跨资产条件特征（仅当提供上下文）。tiltFromFeatures 用 min(len) 对齐，
+  // 故 9 维权重作用于 11 维特征时自动忽略尾部 → 缺 SPY 的路径优雅退化为基础模型。
+  if (cross) feature.push(...crossFeatures(closes, cross.mkt, index));
   return { rawScore: total, feature };
 }
 
@@ -434,11 +481,13 @@ export function combinedProbability(
   evals: StratEval[],
   weights: Record<StrategyCategory, number> = { trend: 1, reversion: 1, pattern: 1 },
   params: ModelParams = DEFAULT_MODEL_PARAMS,
+  mkt?: number[], // 对齐到 candles 的大盘(SPY)收盘；提供则启用跨资产条件维，缺省退化为基础特征
 ): CombinedRead {
   const index = candles.length - 1;
+  const cross = mkt ? { mkt } : undefined;
   const ctx = buildPITContext(candles, evals);
   const { total, byCategory } = ctx.readsAt(weights, index);
-  const { feature } = buildFeature(candles, evals, weights, index, total);
+  const { feature } = buildFeature(candles, evals, weights, index, total, cross);
   const pUp = probabilityFromFeature(feature, ctx.baseRateAt(index), params);
   return { pUp, logodds: total, byCategory };
 }
@@ -454,12 +503,14 @@ export function combinedProbabilitySeries(
   fromIdx: number,
   toIdx: number,
   params: ModelParams = DEFAULT_MODEL_PARAMS,
+  mkt?: number[], // 对齐到 candles 的大盘(SPY)收盘
 ): number[] {
+  const cross = mkt ? { mkt } : undefined;
   const ctx = buildPITContext(candles, evals);
   const out: number[] = [];
   for (let i = fromIdx; i < toIdx; i++) {
     const { total } = ctx.readsAt(weights, i);
-    const { feature } = buildFeature(candles, evals, weights, i, total);
+    const { feature } = buildFeature(candles, evals, weights, i, total, cross);
     out.push(probabilityFromFeature(feature, ctx.baseRateAt(i), params));
   }
   return out;

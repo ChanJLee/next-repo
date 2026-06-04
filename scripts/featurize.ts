@@ -19,7 +19,13 @@ import {
   buildFeature,
   CALIBRATION_HORIZON,
   NUM_FEATURES,
+  NUM_CROSS_FEATURES,
+  FEATURE_NAMES,
+  CROSS_FEATURE_NAMES,
+  alignMarketCloses,
+  type CrossAssetContext,
 } from "../src/app/watchlist/[id]/_components/market-model";
+import { getDailyCandlesFromStooq } from "../src/lib/data/stooq";
 import type { Candle } from "../src/lib/data/yahoo";
 import type { FeatureRow } from "./_fitlib";
 
@@ -33,6 +39,16 @@ async function main() {
     include: { strategies: { where: { enabled: true } }, candles: { orderBy: { date: "asc" } } },
   });
 
+  // 拉一次大盘(SPY)做跨资产条件特征；失败则退化为全 0（特征维数不变）。
+  const spyByDate = new Map<string, number>();
+  try {
+    const spy = await getDailyCandlesFromStooq("SPY", 99999);
+    for (const c of spy) spyByDate.set(c.date.toISOString().slice(0, 10), c.close);
+    console.log(`SPY: ${spy.length} 根（${spy[0]?.date.toISOString().slice(0, 10)} ~ ${spy[spy.length - 1]?.date.toISOString().slice(0, 10)}）`);
+  } catch (e) {
+    console.log(`SPY 拉取失败，跨资产特征将全为 0：${e instanceof Error ? e.message : e}`);
+  }
+
   const rows: FeatureRow[] = [];
   const perSymbol: Record<string, number> = {};
   const t0 = Date.now();
@@ -41,6 +57,9 @@ async function main() {
     const candles: Candle[] = s.candles.map((c) => ({ date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume }));
     const strategies = s.strategies.map((st) => ({ id: st.id, name: st.name, kind: st.kind, params: st.params }));
     const n = candles.length;
+
+    // 对齐大盘收盘到该标的每根 K 线（与 live 走同一 alignMarketCloses，口径一致）
+    const mktFull = alignMarketCloses(candles, spyByDate);
     const lastPredictable = n - 1 - HORIZON;
     if (lastPredictable < MIN_TRAIN) {
       console.log(`[${s.ticker}] 跳过：candles=${n}（不足 ${MIN_TRAIN}+${HORIZON}）`);
@@ -64,7 +83,8 @@ async function main() {
       const slice = candles.slice(0, t + 1);
       const evals = evalStrategies(slice, strategies);
       const st = marketState(slice.map((c) => c.close));
-      const { feature } = buildFeature(slice, evals, st.weights, t);
+      const cross: CrossAssetContext = { mkt: mktFull.slice(0, t + 1) };
+      const { feature } = buildFeature(slice, evals, st.weights, t, undefined, cross);
       if (!feature) continue; // index<60 等情况
       rows.push({ sym: s.ticker, idx: t, date: candles[t].date.toISOString().slice(0, 10), f: feature.map((x) => +x.toFixed(5)), y: label[t], base: +baseRateAt(t).toFixed(5) });
       count++;
@@ -77,7 +97,8 @@ async function main() {
   const out = {
     createdAt: new Date().toISOString(),
     horizon: HORIZON,
-    numFeatures: NUM_FEATURES,
+    numFeatures: NUM_FEATURES + NUM_CROSS_FEATURES,
+    featureNames: [...FEATURE_NAMES, ...CROSS_FEATURE_NAMES],
     step: STEP,
     minTrain: MIN_TRAIN,
     perSymbol,

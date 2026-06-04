@@ -21,7 +21,21 @@ import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
 import { CATEGORY_LABEL, STRATEGY_CATEGORY, type StrategyCategory, type StrategyKind } from "@/lib/strategies/types";
 import type { Candle as ModelCandle } from "@/lib/data/yahoo";
-import { evalStrategies, combinedProbability, combinedProbabilitySeries, marketState, type ModelStrategy } from "./market-model";
+import { evalStrategies, combinedProbabilitySeries, marketState, alignMarketCloses, type ModelStrategy } from "./market-model";
+
+/** 拉大盘(SPY)收盘做跨资产条件特征；失败返回 null（模型自动退化为基础特征）。 */
+async function fetchMarketCloses(days: number): Promise<Map<string, number> | null> {
+  try {
+    const res = await fetch(`/api/market/candles?ticker=SPY&days=${days}`);
+    if (!res.ok) return null;
+    const j = await res.json();
+    const m = new Map<string, number>();
+    for (const p of j.closes ?? []) m.set(p.time, p.close);
+    return m.size > 0 ? m : null;
+  } catch {
+    return null;
+  }
+}
 import { computeTDSequential } from "@/lib/indicators/nine-turn";
 
 interface Candle {
@@ -164,7 +178,11 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         // 逐根综合多空概率曲线
         if (evals.length > 0) {
           const st = marketState(model.map((c) => c.close));
-          const arr = combinedProbabilitySeries(model, evals, st.weights, start, model.length);
+          // 跨资产条件：对齐 SPY 到本标的 K 线（拉取失败则 mkt=undefined，退化为基础模型）
+          const spyMap = await fetchMarketCloses(fetchDays);
+          if (aborted) return;
+          const mkt = spyMap ? alignMarketCloses(model, spyMap) : undefined;
+          const arr = combinedProbabilitySeries(model, evals, st.weights, start, model.length, undefined, mkt);
           setProbSeries(disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), value: arr[k] })));
           setCombined({ pUp: arr[arr.length - 1] ?? 0.5, regimeLabel: st.label });
         } else {

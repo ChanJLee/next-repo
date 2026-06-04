@@ -175,6 +175,7 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
       const created = await res.json();
       setStrategies((prev) => [toVM(created), ...prev]);
       toast.success(`${preset.name} 已添加`);
+      setShowPresets(false); // 添加完成即关闭预设面板
       router.refresh();
     } finally {
       setBusyPresetName(null);
@@ -209,8 +210,12 @@ export function StrategiesPanel({ symbolId, initial }: { symbolId: number; ticke
         .map((r) => toVM(r.value));
       setStrategies((prev) => [...createdVMs, ...prev]);
       const failed = results.length - createdVMs.length;
-      if (failed === 0) toast.success(`已添加 ${createdVMs.length} 条预设策略`);
-      else toast.warning(`${createdVMs.length} 条成功，${failed} 条失败`);
+      if (failed === 0) {
+        toast.success(`已添加 ${createdVMs.length} 条预设策略`);
+        setShowPresets(false); // 全部成功即关闭；有失败则留开便于重试
+      } else {
+        toast.warning(`${createdVMs.length} 条成功，${failed} 条失败`);
+      }
       router.refresh();
     } finally {
       setBulkAdding(false);
