@@ -305,23 +305,17 @@ function categoryReadsAt(
   return { total, byCategory };
 }
 
-interface CalibrationModel {
-  features: Array<number[] | null>;
-  labels: Array<number | null>;
-  rawScores: number[];
-  baseRate: number;
-}
-
 export function buildFeature(
   candles: Candle[],
   evals: StratEval[],
   weights: Record<StrategyCategory, number>,
   index: number,
+  evidenceOverride?: number, // 点-时证据（PIT 上下文提供）；缺省则用 evals 的全样本命中率（离线切片调用本就点-时）
 ): { rawScore: number; feature: number[] | null } {
   const closes = candles.map((c) => c.close);
   if (index < 60) return { rawScore: 0, feature: null };
 
-  const { total } = categoryReadsAt(evals, weights, index);
+  const total = evidenceOverride ?? categoryReadsAt(evals, weights, index).total;
   const vol = dailyVolAt(closes, index);
   const feature = [
     clampFeature(total),
@@ -341,38 +335,74 @@ export function buildFeature(
   return { rawScore: total, feature };
 }
 
-function buildCalibrationModel(
-  candles: Candle[],
-  evals: StratEval[],
-  weights: Record<StrategyCategory, number>,
-): CalibrationModel {
-  const features: Array<number[] | null> = [];
-  const labels: Array<number | null> = [];
-  const rawScores: number[] = [];
-  let labelSum = 0;
-  let labelN = 0;
+/**
+ * 点-时（walk-forward）上下文：任意 index i 处的证据/基准率只用「截至 i 已实现的历史」。
+ *   · 每条策略的命中率：信号起点 j 的结局在 j+horizon 才揭晓，故只在 r=j+horizon ≤ i 时计入；
+ *     用前缀和使 readsAt(i) 为 O(策略数)。
+ *   · baseRate(i)：标签 j 的结局在 j+H 揭晓，累计 [0, i-H] 的上涨率（与 featurize.ts 同口径）。
+ * 这样图表历史曲线不再借用未来命中率/基准率——与离线评估一致、无未来函数。
+ */
+function buildPITContext(candles: Candle[], evals: StratEval[]) {
+  const n = candles.length;
+  const closes = candles.map((c) => c.close);
 
-  for (let i = 0; i < candles.length; i++) {
-    const { rawScore, feature } = buildFeature(candles, evals, weights, i);
-    rawScores.push(rawScore);
-    features.push(feature);
-
-    if (i + CALIBRATION_HORIZON < candles.length) {
-      const label = candles[i + CALIBRATION_HORIZON].close > candles[i].close ? 1 : 0;
-      labels.push(label);
-      labelSum += label;
-      labelN++;
-    } else {
-      labels.push(null);
+  const stats = evals.map((e) => {
+    const longHit = new Array(n).fill(0);
+    const longCnt = new Array(n).fill(0);
+    const shortHit = new Array(n).fill(0);
+    const shortCnt = new Array(n).fill(0);
+    for (let j = 0; j < e.levels.length; j++) {
+      if (!isSignalStart(e.levels, j)) continue;
+      const r = j + e.horizon;
+      if (r >= n) continue; // 结局未实现 → 点-时不计入
+      const up = closes[r] > closes[j];
+      if (e.levels[j] === "long") { longCnt[r] += 1; if (up) longHit[r] += 1; }
+      else if (e.levels[j] === "short") { shortCnt[r] += 1; if (!up) shortHit[r] += 1; }
     }
+    for (let i = 1; i < n; i++) {
+      longHit[i] += longHit[i - 1]; longCnt[i] += longCnt[i - 1];
+      shortHit[i] += shortHit[i - 1]; shortCnt[i] += shortCnt[i - 1];
+    }
+    return { e, longHit, longCnt, shortHit, shortCnt };
+  });
+
+  const H = CALIBRATION_HORIZON;
+  const upCum = new Array(n).fill(0);
+  const totCum = new Array(n).fill(0);
+  for (let j = 0; j + H < n; j++) {
+    const r = j + H;
+    totCum[r] += 1;
+    if (closes[r] > closes[j]) upCum[r] += 1;
+  }
+  for (let i = 1; i < n; i++) { upCum[i] += upCum[i - 1]; totCum[i] += totCum[i - 1]; }
+
+  const accLongAt = (s: (typeof stats)[number], i: number) => (s.longHit[i] + PSEUDO / 2) / (s.longCnt[i] + PSEUDO);
+  const accShortAt = (s: (typeof stats)[number], i: number) => (s.shortHit[i] + PSEUDO / 2) / (s.shortCnt[i] + PSEUDO);
+
+  function readsAt(weights: Record<StrategyCategory, number>, index: number): { total: number; byCategory: CategoryRead[] } {
+    let total = 0;
+    const byCategory: CategoryRead[] = [];
+    for (const cat of CATS) {
+      const members = stats.filter((s) => s.e.category === cat);
+      if (members.length === 0) continue;
+      let sum = 0, cnt = 0, longN = 0, shortN = 0;
+      for (const s of members) {
+        const level = s.e.levels[index] ?? "neutral";
+        if (level === "long") { sum += edge(accLongAt(s, index)); cnt++; longN++; }
+        else if (level === "short") { sum += -edge(accShortAt(s, index)); cnt++; shortN++; }
+      }
+      const evidence = cnt > 0 ? sum / cnt : 0;
+      const w = weights[cat] ?? 1;
+      byCategory.push({ category: cat, evidence, weight: w, longN, shortN, total: members.length });
+      total += w * evidence;
+    }
+    return { total, byCategory };
   }
 
-  return {
-    features,
-    labels,
-    rawScores,
-    baseRate: labelN > 0 ? labelSum / labelN : 0.5,
-  };
+  // 实现样本 < 30 时基准率估计极不稳定（会出现 0.99/0.01 尖刺），退回 0.5。
+  // 仅影响最早 ~30+H 根（离线拟合从第 400 根起，从不评估此区）→ 与 featurize 口径零漂移。
+  const baseRateAt = (index: number) => (totCum[index] >= 30 ? upCum[index] / totCum[index] : 0.5);
+  return { readsAt, baseRateAt };
 }
 
 // 逐因子加权求和 → log-odds 偏移（每个因子先过 tanh 做软饱和）
@@ -399,10 +429,6 @@ export function probabilityFromFeature(
   return clamp(sigmoid(logit(anchor) + tilt));
 }
 
-function calibratedProbability(model: CalibrationModel, index: number, params: ModelParams = DEFAULT_MODEL_PARAMS): number {
-  return probabilityFromFeature(model.features[index], model.baseRate, params);
-}
-
 export function combinedProbability(
   candles: Candle[],
   evals: StratEval[],
@@ -410,15 +436,16 @@ export function combinedProbability(
   params: ModelParams = DEFAULT_MODEL_PARAMS,
 ): CombinedRead {
   const index = candles.length - 1;
-  const { total, byCategory } = categoryReadsAt(evals, weights, index);
-  const model = buildCalibrationModel(candles, evals, weights);
-  return { pUp: calibratedProbability(model, index, params), logodds: total, byCategory };
+  const ctx = buildPITContext(candles, evals);
+  const { total, byCategory } = ctx.readsAt(weights, index);
+  const { feature } = buildFeature(candles, evals, weights, index, total);
+  const pUp = probabilityFromFeature(feature, ctx.baseRateAt(index), params);
+  return { pUp, logodds: total, byCategory };
 }
 
 /**
- * 逐根 K 线的综合多空概率序列：用每根当时各策略的级别 + 历史命中率权重 + 分类权重，
- * 算出该根的 P(多)。用于在图上画概率曲线。
- * 注：命中率是全历史估计（含该根之后的数据），属于"事后视角"的展示，非严格无未来函数的回测。
+ * 逐根 K 线的综合多空概率序列（点-时、无未来函数）：每根只用截至该根已实现的
+ * 命中率与基准率（见 buildPITContext），故图上历史曲线就是当时实时系统会给出的读数。
  */
 export function combinedProbabilitySeries(
   candles: Candle[],
@@ -428,10 +455,12 @@ export function combinedProbabilitySeries(
   toIdx: number,
   params: ModelParams = DEFAULT_MODEL_PARAMS,
 ): number[] {
-  const model = buildCalibrationModel(candles, evals, weights);
+  const ctx = buildPITContext(candles, evals);
   const out: number[] = [];
   for (let i = fromIdx; i < toIdx; i++) {
-    out.push(calibratedProbability(model, i, params));
+    const { total } = ctx.readsAt(weights, i);
+    const { feature } = buildFeature(candles, evals, weights, i, total);
+    out.push(probabilityFromFeature(feature, ctx.baseRateAt(i), params));
   }
   return out;
 }

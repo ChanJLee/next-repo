@@ -37,9 +37,11 @@ export interface BacktestResult {
 export function backtest(
   candles: Candle[],
   levels: Level[],
-  opts: { initialEquity?: number } = {},
+  opts: { initialEquity?: number; costBps?: number } = {},
 ): BacktestResult {
   const init = opts.initialEquity ?? 10000;
+  // 单边交易成本（基点）：买入抬价、卖出压价，体现手续费+滑点。默认 0（不改历史显示数值）。
+  const cost = Math.max(0, opts.costBps ?? 0) / 10000;
   const empty: BacktestResult = {
     initialEquity: init,
     finalEquity: init,
@@ -80,23 +82,26 @@ export function backtest(
     // 触发：level 变化 → 下一根开盘价交易
     if (level !== prev && i < candles.length - 1) {
       const next = candles[i + 1];
-      const tradePrice = next.open;
       const tradeDate = next.date.toISOString().slice(0, 10);
+      // 成交价含成本：买入按 open×(1+cost)、卖出按 open×(1-cost)，entryPrice/exitPrice 即净成交价，
+      // 故 returnPct 与权益曲线都已扣除来回成本。
+      const buyPrice = next.open * (1 + cost);
+      const sellPrice = next.open * (1 - cost);
 
-      if (level === "long" && shares === 0 && tradePrice > 0) {
-        shares = cash / tradePrice;
+      if (level === "long" && shares === 0 && buyPrice > 0) {
+        shares = cash / buyPrice;
         cash = 0;
-        entryPrice = tradePrice;
+        entryPrice = buyPrice;
         entryDate = tradeDate;
         entryIdx = i + 1;
       } else if (level !== "long" && shares > 0) {
-        const exitValue = shares * tradePrice;
+        const exitValue = shares * sellPrice;
         trades.push({
           entryDate,
           entryPrice,
           exitDate: tradeDate,
-          exitPrice: tradePrice,
-          returnPct: ((tradePrice - entryPrice) / entryPrice) * 100,
+          exitPrice: sellPrice,
+          returnPct: ((sellPrice - entryPrice) / entryPrice) * 100,
           holdDays: i + 1 - entryIdx,
         });
         cash = exitValue;
@@ -118,19 +123,19 @@ export function backtest(
     });
   }
 
-  // 期末若仍持仓，按最后一根收盘价了结
+  // 期末若仍持仓，按最后一根收盘价了结（同样扣卖出成本）
   if (shares > 0) {
     const last = candles[candles.length - 1];
-    const lastClose = last.close;
+    const lastSell = last.close * (1 - cost);
     trades.push({
       entryDate,
       entryPrice,
       exitDate: last.date.toISOString().slice(0, 10),
-      exitPrice: lastClose,
-      returnPct: ((lastClose - entryPrice) / entryPrice) * 100,
+      exitPrice: lastSell,
+      returnPct: ((lastSell - entryPrice) / entryPrice) * 100,
       holdDays: candles.length - 1 - entryIdx,
     });
-    cash = shares * lastClose;
+    cash = shares * lastSell;
     shares = 0;
   }
 

@@ -25,6 +25,10 @@ export const WINDOW_OPTIONS: { days: number; label: string }[] = [
 ];
 export const DEFAULT_WINDOW_DAYS = 730;
 
+// 回测单边交易成本（基点）：手续费+滑点的保守估计，让展示收益更贴近真实。
+// 流动性好的美股/ETF 约 5bp/边；改这个值会通过 strategySig 让旧缓存自动失效。
+export const DEFAULT_BACKTEST_COST_BPS = 5;
+
 export function windowLabel(days: number): string {
   return WINDOW_OPTIONS.find((w) => w.days === days)?.label ?? `${Math.round(days / 365)} 年`;
 }
@@ -37,7 +41,7 @@ export interface BacktestCache {
 
 /** 策略签名：参数或类型一变，旧的回测结果即失效。 */
 export function strategySig(s: StrategyVM): string {
-  return `${s.kind}|${s.params}`;
+  return `${s.kind}|${s.params}|c${DEFAULT_BACKTEST_COST_BPS}`;
 }
 
 function cacheKey(symbolId: number): string {
@@ -141,7 +145,7 @@ export async function runAllBacktests(
       const levels = levelSeries(kind.data, params, candles);
       const cs = start >= 0 ? candles.slice(start) : candles;
       const lv = start >= 0 ? levels.slice(start) : levels;
-      const r = backtest(cs, lv);
+      const r = backtest(cs, lv, { costBps: DEFAULT_BACKTEST_COST_BPS });
       items[s.id] = {
         sig: strategySig(s),
         summary: {
