@@ -305,12 +305,49 @@ function categoryReadsAt(
   return { total, byCategory };
 }
 
+// ---- 跨资产条件特征（实验中）-------------------------------------------------
+// 思路：单标的日线方向的多数方差来自大盘 beta + 波动率 regime。引入大盘(SPY)与
+// 波动率（用 SPY 已实现波动率代理 VIX——真 ^VIX 在可用数据源取不到）做「条件」：
+//   · mktTrend  大盘 vs 200d MA（风险偏好 on/off）
+//   · mktMom    大盘 20 日动量
+//   · volRegime 短期/长期已实现波动率之比（>0=紧张，VIX 代理）
+//   · relStrength 个股相对大盘的 20 日超额（截面强弱味道）
+//   · momXcalm  个股动量 × 平静度（平静顺动量、紧张反向）—— 用户要的「做条件」
+// mkt 为对齐到 candles 同 index 的 SPY 收盘序列；不传或当根无大盘数据 → 全 0（生产路径即此）。
+export interface CrossAssetContext {
+  mkt: number[]; // 与 candles 等长、按 index 对齐的大盘（SPY）收盘价；缺失处前向填充，更早处置 0
+}
+export const CROSS_FEATURE_NAMES = ["mktTrend", "mktMom", "volRegime", "relStrength", "momXcalm"] as const;
+export const NUM_CROSS_FEATURES = CROSS_FEATURE_NAMES.length;
+
+function crossFeatures(closes: number[], mkt: number[], index: number): number[] {
+  const zero = new Array(NUM_CROSS_FEATURES).fill(0);
+  if (index < 20 || mkt.length !== closes.length || !(mkt[index] > 0) || !(mkt[index - 20] > 0)) return zero;
+  const mvol = dailyVolAt(mkt, index, 20);
+  const mktTrend = normalizedDistanceToMa(mkt, index, 200, mvol);
+  const mktMom = normalizedReturn(mkt, index, 20, mvol);
+  // 波动率 regime：20 日 vs 252 日已实现波动率之比的对数（VIX 代理；>0 紧张）
+  const rvShort = dailyVolAt(mkt, index, 20);
+  const rvLong = dailyVolAt(mkt, index, 252);
+  const volRegime = rvLong > 0 ? clampFeature(Math.log(rvShort / rvLong) / 0.5) : 0;
+  // 相对强弱：个股 20 日对数收益 − 大盘 20 日对数收益，按个股波动标准化
+  const svol = dailyVolAt(closes, index);
+  const stockR = closes[index - 20] > 0 ? Math.log(closes[index] / closes[index - 20]) : 0;
+  const mktR = Math.log(mkt[index] / mkt[index - 20]);
+  const relStrength = clampFeature((stockR - mktR) / (svol * Math.sqrt(20)));
+  // 条件化：个股标准化动量 × 平静度（−volRegime）
+  const stockMomNorm = normalizedReturn(closes, index, 20, svol);
+  const momXcalm = clampFeature(stockMomNorm * -volRegime);
+  return [mktTrend, mktMom, volRegime, relStrength, momXcalm];
+}
+
 export function buildFeature(
   candles: Candle[],
   evals: StratEval[],
   weights: Record<StrategyCategory, number>,
   index: number,
   evidenceOverride?: number, // 点-时证据（PIT 上下文提供）；缺省则用 evals 的全样本命中率（离线切片调用本就点-时）
+  cross?: CrossAssetContext,  // 跨资产上下文；不传 → 仅产出 9 维基础特征（生产路径不变）
 ): { rawScore: number; feature: number[] | null } {
   const closes = candles.map((c) => c.close);
   if (index < 60) return { rawScore: 0, feature: null };
@@ -332,6 +369,9 @@ export function buildFeature(
   const h = hurstExponent(closes.slice(0, index + 1));
   const regimeSign = h == null ? 0 : Math.sign(h - 0.5);
   feature.push(clampFeature(regimeSign * feature[2]));
+  // 追加跨资产条件特征（仅当提供上下文）。tiltFromFeatures 用 min(len) 对齐，
+  // 故 9 维权重作用于此 14 维特征时自动忽略尾部 → 生产模型零影响。
+  if (cross) feature.push(...crossFeatures(closes, cross.mkt, index));
   return { rawScore: total, feature };
 }
 

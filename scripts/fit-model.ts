@@ -27,12 +27,14 @@ const POP = Number(process.argv[4] ?? 48);
 const TRAIN_FRAC = Number(process.argv[5] ?? 0.7);
 const SEED = Number(process.argv[6] ?? 1);
 
-const DIM = NUM_FEATURES + 1; // 9 个权重 + maxTilt
+// 特征维数从缓存推断（支持跨资产追加维）；main() 里按实际缓存覆盖。
+let NF: number = NUM_FEATURES; // 特征权重个数
+let DIM: number = NF + 1;       // 权重 + maxTilt
 const W_LO = -1, W_HI = 1;
 const T_LO = 0.02, T_HI = 0.6;
 
-const lo = (k: number) => (k < NUM_FEATURES ? W_LO : T_LO);
-const hi = (k: number) => (k < NUM_FEATURES ? W_HI : T_HI);
+const lo = (k: number) => (k < NF ? W_LO : T_LO);
+const hi = (k: number) => (k < NF ? W_HI : T_HI);
 
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -45,25 +47,30 @@ function mulberry32(seed: number) {
 }
 const rng = mulberry32(SEED);
 
-const toParams = (x: number[]): ModelParams => ({ weights: x.slice(0, NUM_FEATURES), maxTilt: x[NUM_FEATURES] });
+const toParams = (x: number[]): ModelParams => ({ weights: x.slice(0, NF), maxTilt: x[NF] });
 const clampDim = (x: number[]) => x.map((v, k) => Math.min(hi(k), Math.max(lo(k), v)));
 
 function objective(x: number[], train: FeatureRow[]): number {
   const params = toParams(x);
   const b = brier(train, (r) => predict(r, params));
-  const reg = LAMBDA * x.slice(0, NUM_FEATURES).reduce((a, w) => a + w * w, 0);
+  const reg = LAMBDA * x.slice(0, NF).reduce((a, w) => a + w * w, 0);
   return b + reg;
 }
 
 function main() {
   const cache = loadCache();
+  NF = cache.rows[0]?.f.length ?? NUM_FEATURES; // 实际特征维（基础 9 + 跨资产 5 = 14）
+  DIM = NF + 1;
+  const names = cache.featureNames ?? FEATURE_NAMES;
   const { train, test } = splitByTime(cache.rows, TRAIN_FRAC);
-  console.log(`缓存：${cache.rows.length} 行（${Object.keys(cache.perSymbol).join(", ")}）  train=${train.length}  test=${test.length}`);
+  console.log(`缓存：${cache.rows.length} 行（${Object.keys(cache.perSymbol).join(", ")}）  train=${train.length}  test=${test.length}  特征维=${NF}`);
   console.log(`DE：dim=${DIM} pop=${POP} gens=${GENERATIONS} λ=${LAMBDA} trainFrac=${TRAIN_FRAC} seed=${SEED}`);
 
-  // ---- 初始化种群（含默认模型作为种子）----
+  // ---- 初始化种群（含默认模型作为种子；不足维以 0 补齐 = 「无跨资产」起点，保证不劣于现状）----
+  const seedWeights = [...DEFAULT_MODEL_PARAMS.weights];
+  while (seedWeights.length < NF) seedWeights.push(0);
   const pop: number[][] = [];
-  pop.push(clampDim([...DEFAULT_MODEL_PARAMS.weights, DEFAULT_MODEL_PARAMS.maxTilt]));
+  pop.push(clampDim([...seedWeights, DEFAULT_MODEL_PARAMS.maxTilt]));
   while (pop.length < POP) {
     pop.push(Array.from({ length: DIM }, (_, k) => lo(k) + rng() * (hi(k) - lo(k))));
   }
@@ -107,7 +114,7 @@ function main() {
   console.log(`\n样本外 Brier-skill 变化：${dTest >= 0 ? "+" : ""}${dTest.toFixed(4)}（>0 表示进化后在没见过的数据上更准）`);
 
   console.log("\n各因子权重（进化后）：");
-  fitted.weights.forEach((w, k) => console.log(`  ${FEATURE_NAMES[k].padEnd(10)} ${w >= 0 ? " " : ""}${w}`));
+  fitted.weights.forEach((w, k) => console.log(`  ${(names[k] ?? `f${k}`).padEnd(11)} ${w >= 0 ? " " : ""}${w}`));
   console.log(`  maxTilt    ${fitted.maxTilt}`);
 
   console.log("\n把下面这段粘到 market-model.ts 的 DEFAULT_MODEL_PARAMS 即可采用：");

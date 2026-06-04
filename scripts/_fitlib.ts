@@ -22,6 +22,7 @@ export interface FeatureCache {
   createdAt: string;
   horizon: number;
   numFeatures: number;
+  featureNames?: string[]; // 与每行 f 等长的特征名（含跨资产追加维）；旧缓存可能没有
   step: number;
   minTrain: number;
   perSymbol: Record<string, number>;
