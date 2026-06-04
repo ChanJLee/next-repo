@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,12 @@ export function WatchlistManager({ initialSymbols }: { initialSymbols: SymbolVM[
   const [symbols, setSymbols] = useState(initialSymbols);
   const [newTicker, setNewTicker] = useState("");
   const [newName, setNewName] = useState("");
+
+  // router.refresh() 后服务端会回传新的 initialSymbols（含刚添加的股票）；
+  // useState 仅在首挂载取初值，故这里把刷新后的 prop 同步进本地 state，否则列表不更新。
+  useEffect(() => {
+    setSymbols(initialSymbols);
+  }, [initialSymbols]);
 
   function refresh() {
     router.refresh();
