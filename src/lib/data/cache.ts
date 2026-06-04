@@ -166,8 +166,12 @@ export async function getCandlesCached({ symbolId, ticker, days, force, stooqApi
     });
     if (cached.length > 0) {
       const newest = cached[cached.length - 1];
-      const stalenessMs = Date.now() - newest.updatedAt.getTime();
-      if (stalenessMs < candleTTL()) {
+      const oldest = cached[0];
+      const fresh = Date.now() - newest.updatedAt.getTime() < candleTTL();
+      // 缓存里最早一根要接近 since 才算覆盖了请求的历史深度；否则（例如库里只存了 2 年、
+      // 却要看 5 年）要回源补更早的历史，不能直接返回这截较浅的缓存。
+      const deepEnough = oldest.date.getTime() <= since.getTime() + 14 * 86400_000;
+      if (fresh && deepEnough) {
         return cached.map(toCandle);
       }
     }

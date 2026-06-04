@@ -63,7 +63,7 @@ const RANGES: { value: ChartRange; label: string }[] = [
 const RANGE_DAYS: Record<ChartRange, number> = { "1w": 14, "1m": 35, "3m": 100, "1y": 380, "2y": 760, "5y": 1850 };
 const MAX_HISTORY_DAYS = 3650;
 const LOAD_MORE_DAYS = 365;
-const LOAD_MORE_RANGES = new Set<ChartRange>(["2y", "5y"]);
+// 可视范围左边缘距数据起点不足这么多根时，继续向更早的方向拉 K 线。
 const LOAD_MORE_EDGE_BARS = 20;
 
 const UP_COLOR = "#16a34a";
@@ -154,11 +154,11 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
     setCombined(null);
   }, [range]);
 
-  const canLoadMoreHistory = LOAD_MORE_RANGES.has(range) && historyDays < MAX_HISTORY_DAYS;
+  const windowDays = RANGE_DAYS[range];
+  const canLoadMoreHistory = historyDays < MAX_HISTORY_DAYS;
   const loadMoreHistory = useCallback(() => {
-    if (!LOAD_MORE_RANGES.has(range)) return;
     setHistoryDays((days) => Math.min(days + LOAD_MORE_DAYS, MAX_HISTORY_DAYS));
-  }, [range]);
+  }, []);
 
   useEffect(() => {
     let aborted = false;
@@ -181,20 +181,19 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         }
         const model = Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
         const evals = evalStrategies(model, strategies);
-        const sinceTs = Date.now() - days * 86400_000;
-        const idx = model.findIndex((c) => c.date.getTime() >= sinceTs);
-        const start = idx < 0 ? 0 : idx;
-        const disp = model.slice(start);
+        // 渲染全部已拉取的 K 线；所选窗口只决定图表的初始可视范围，向左滑可看到更早的历史，
+        // 滑到数据起点附近时再继续向更早的方向加载。
+        const disp = model;
         setCandles(disp.map((c) => ({ time: c.date.toISOString().slice(0, 10), open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume })));
-        // TD Sequential：用全量序列计算（Countdown 13 需要长历史才准），再切到展示区间，只保留 13 信号
+        // TD Sequential：用全量序列计算（Countdown 13 需要长历史才准）
         const td = computeTDSequential(model);
-        setNineTurn(disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), buy13: td.buy13[start + k], sell13: td.sell13[start + k] })));
+        setNineTurn(disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), buy13: td.buy13[k], sell13: td.sell13[k] })));
         setLaneSource(
           evals.map((e) => ({
             id: e.id,
             name: e.name,
             category: e.category,
-            items: disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), level: e.levels[start + k] })),
+            items: disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), level: e.levels[k] })),
           })),
         );
         // 逐根综合多空概率曲线
@@ -204,7 +203,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
           const spyMap = await fetchMarketCloses(fetchDays);
           if (aborted) return;
           const mkt = spyMap ? alignMarketCloses(model, spyMap) : undefined;
-          const arr = combinedProbabilitySeries(model, evals, st.weights, start, model.length, undefined, mkt);
+          const arr = combinedProbabilitySeries(model, evals, st.weights, 0, model.length, undefined, mkt);
           setProbSeries(disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), value: arr[k] })));
           setCombined({ pUp: arr[arr.length - 1] ?? 0.5, regimeLabel: st.label });
         } else {
@@ -296,6 +295,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
           loading={loading}
           error={error}
           resetViewKey={range}
+          windowDays={windowDays}
           canLoadMoreHistory={canLoadMoreHistory}
           onLoadMoreHistory={loadMoreHistory}
         />
@@ -319,11 +319,9 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
           </div>
         ) : null}
 
-        {LOAD_MORE_RANGES.has(range) ? (
-          <div className="mt-2 text-xs text-muted-foreground">
-            向左滑到历史边缘会继续加载更早 K 线，当前约 {Math.round(historyDays / 365)} 年{canLoadMoreHistory ? "" : "（已到上限）"}。
-          </div>
-        ) : null}
+        <div className="mt-2 text-xs text-muted-foreground">
+          所选区间只决定初始显示范围；向左滑可查看更早的 K 线，滑到起点附近会继续加载，已载入约 {Math.max(1, Math.round(historyDays / 365))} 年历史{canLoadMoreHistory ? "" : "（已到上限）"}。
+        </div>
 
         {lanes.length > 0 ? (
           <div className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -350,6 +348,7 @@ function ChartCanvas({
   loading,
   error,
   resetViewKey,
+  windowDays,
   canLoadMoreHistory,
   onLoadMoreHistory,
 }: {
@@ -360,6 +359,7 @@ function ChartCanvas({
   loading: boolean;
   error: string | null;
   resetViewKey: string;
+  windowDays: number;
   canLoadMoreHistory: boolean;
   onLoadMoreHistory: () => void;
 }) {
@@ -465,14 +465,17 @@ function ChartCanvas({
     volumeSeriesRef.current.setData(clean.map((c) => ({ time: c.time as Time, value: c.volume, color: c.close >= c.open ? `${UP_COLOR}55` : `${DOWN_COLOR}55` })));
     if (clean.length > 0) {
       if (resetView) {
-        timeScale?.fitContent();
+        // 切换区间/首次加载：把可视范围对到所选窗口（右端为最新），更早的已拉取历史留在左侧屏幕外，向左滑即可看到。
+        const cutoff = new Date(Date.now() - windowDays * 86400_000).toISOString().slice(0, 10);
+        const fromIdx = clean.findIndex((c) => c.time >= cutoff);
+        timeScale?.setVisibleLogicalRange({ from: (fromIdx < 0 ? 0 : fromIdx) - 0.5, to: clean.length - 0.5 });
       } else if (visibleRange && prependedBars > 0) {
         timeScale?.setVisibleLogicalRange({ from: visibleRange.from + prependedBars, to: visibleRange.to + prependedBars });
       }
     }
     lastCleanRef.current = clean;
     lastResetViewKeyRef.current = resetViewKey;
-  }, [clean, resetViewKey]);
+  }, [clean, resetViewKey, windowDays]);
 
   useEffect(() => {
     if (!markersRef.current) return;
