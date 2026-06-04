@@ -72,14 +72,16 @@ export interface ModelParams {
   maxTilt: number;   // 相对基准率的最大 |log-odds| 偏移
 }
 
-// 由 scripts/fit-model.ts 在复权长历史（9 标的、走查样本外）上差分进化得到。
-// 11 维 = 9 基础 + 2 跨资产（mktTrend, volRegime）。跨资产把样本外 Brier-skill 再 +0.0015，
-// 主贡献是 volRegime（VIX 代理，负权重：高波动→调低涨概率），跨 seed/λ 符号稳定。
-// 末两位作用于 SPY 派生的跨资产特征；线上缺 SPY 时 probabilityFromFeature 的 min(len)
-// 会自动只用前 9 维 → 优雅退化为基础模型。
+// ⚠️ 条件 tilt 已清零（2026-06 修订）。理由见 scripts/cv-model.ts 的滚动起点交叉验证：
+// 单次 70/30 切分看到的 +0.0029 skill 是近端 regime 的运气；做扩窗滚动 CV 后，池化样本外
+// skill = -0.0054（按日期分块自助 95% CI=[-0.0102,-0.0007]，整段 <0），且收缩扫描显示
+// skill 随 tilt 单调下降、最优收缩 s*=0。即：当前这套特征的任何条件偏移都不如直接报
+// 「点-时历史上涨率」。故权重全 0、maxTilt=0 → P(多) = 诚实基准率，不做未经验证的偏移。
+// 特征工程 / 拟合 / CV 管线全保留；待 #1 截面 rank、#3 可预测目标找到能过滤滚动 CV 的
+// 真信号后，把 fit-model（应改用 CV 目标）产出的新权重粘回这里即可重新启用。
 export const DEFAULT_MODEL_PARAMS: ModelParams = {
-  weights: [0.0141, -0.0292, 0.0155, -0.0051, 0.0111, 0.0002, 0.0757, 0.0304, -0.0101, 0.0016, -0.0437],
-  maxTilt: 0.1211,
+  weights: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  maxTilt: 0,
 };
 
 export interface StratEval {

@@ -29,10 +29,11 @@ import { getDailyCandlesFromStooq } from "../src/lib/data/stooq";
 import type { Candle } from "../src/lib/data/yahoo";
 import type { FeatureRow } from "./_fitlib";
 
-const HORIZON = CALIBRATION_HORIZON;
 const MAX_POINTS = Number(process.argv[2] ?? Number.POSITIVE_INFINITY);
 const STEP = Math.max(1, Number(process.argv[3] ?? 1));
 const MIN_TRAIN = Number(process.argv[4] ?? 400);
+const HORIZON = Number(process.argv[5] ?? CALIBRATION_HORIZON); // 实验可拉长预测视野（默认=生产 10 日）
+const OUT_FILE = process.argv[6] ?? "feature-cache.json";       // 实验可写到别的文件，不覆盖生产缓存
 
 async function main() {
   const symbols = await prisma.symbol.findMany({
@@ -104,7 +105,7 @@ async function main() {
     perSymbol,
     rows,
   };
-  const path = join(process.cwd(), "data", "feature-cache.json");
+  const path = join(process.cwd(), "data", OUT_FILE);
   writeFileSync(path, JSON.stringify(out));
   console.log(`\n写入 ${path}：${rows.length} 行，${Object.keys(perSymbol).length} 个标的，用时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   await prisma.$disconnect();
