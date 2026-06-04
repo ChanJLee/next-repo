@@ -17,6 +17,7 @@
     "model:eval": "tsx scripts/eval-model.ts",
     "model:monitor": "tsx scripts/monitor-calibration.ts",
     "model:cv": "tsx scripts/cv-model.ts",
+    "model:featurize-xs": "tsx scripts/featurize-xs.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
