@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createChart,
   createSeriesMarkers,
@@ -61,6 +61,10 @@ const RANGES: { value: ChartRange; label: string }[] = [
   { value: "5y", label: "5年" },
 ];
 const RANGE_DAYS: Record<ChartRange, number> = { "1w": 14, "1m": 35, "3m": 100, "1y": 380, "2y": 760, "5y": 1850 };
+const MAX_HISTORY_DAYS = 3650;
+const LOAD_MORE_DAYS = 365;
+const LOAD_MORE_RANGES = new Set<ChartRange>(["2y", "5y"]);
+const LOAD_MORE_EDGE_BARS = 20;
 
 const UP_COLOR = "#16a34a";
 const DOWN_COLOR = "#dc2626";
@@ -113,6 +117,7 @@ async function readJson(res: Response): Promise<any> {
 
 export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: number; ticker: string; strategies: ModelStrategy[] }) {
   const [range, setRange] = useState<ChartRange>("1m");
+  const [historyDays, setHistoryDays] = useState(RANGE_DAYS["1m"]);
   const [candles, setCandles] = useState<Candle[]>([]);
   const [laneSource, setLaneSource] = useState<{ id: number; name: string; category: StrategyCategory; items: LaneItem[] }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,11 +143,28 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
     return { trend: pick("trend"), reversion: pick("reversion"), pattern: pick("pattern") };
   });
 
+  const changeRange = useCallback((nextRange: ChartRange) => {
+    if (nextRange === range) return;
+    setRange(nextRange);
+    setHistoryDays(RANGE_DAYS[nextRange]);
+    setCandles([]);
+    setLaneSource([]);
+    setProbSeries([]);
+    setNineTurn([]);
+    setCombined(null);
+  }, [range]);
+
+  const canLoadMoreHistory = LOAD_MORE_RANGES.has(range) && historyDays < MAX_HISTORY_DAYS;
+  const loadMoreHistory = useCallback(() => {
+    if (!LOAD_MORE_RANGES.has(range)) return;
+    setHistoryDays((days) => Math.min(days + LOAD_MORE_DAYS, MAX_HISTORY_DAYS));
+  }, [range]);
+
   useEffect(() => {
     let aborted = false;
     setLoading(true);
     setError(null);
-    const days = RANGE_DAYS[range];
+    const days = historyDays;
     const warmup = strategies.reduce((m, s) => Math.max(m, warmupFor(s)), 50);
     // 至少拉 ~800 天，保证「综合多空」的命中率估计稳定（不随所选区间大幅波动）
     const fetchDays = Math.min(Math.max(days + warmup * 2, 800), 3650);
@@ -193,7 +215,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
       .catch((e) => { if (!aborted) setError(e instanceof Error ? e.message : "网络错误"); })
       .finally(() => { if (!aborted) setLoading(false); });
     return () => { aborted = true; };
-  }, [symbolId, range, refreshTick, strategies]);
+  }, [symbolId, historyDays, refreshTick, strategies]);
 
   const lanes: Lane[] = useMemo(() => {
     const out: Lane[] = [];
@@ -227,7 +249,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {RANGES.map((r) => (
-            <Button key={r.value} variant={range === r.value ? "default" : "outline"} size="sm" onClick={() => setRange(r.value)}>
+            <Button key={r.value} variant={range === r.value ? "default" : "outline"} size="sm" onClick={() => changeRange(r.value)}>
               {r.label}
             </Button>
           ))}
@@ -266,7 +288,17 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
           })}
         </div>
 
-        <ChartCanvas candles={candles} lanes={lanes} probSeries={probSeries} nineTurn={showNine ? nineTurn : []} loading={loading} error={error} />
+        <ChartCanvas
+          candles={candles}
+          lanes={lanes}
+          probSeries={probSeries}
+          nineTurn={showNine ? nineTurn : []}
+          loading={loading}
+          error={error}
+          resetViewKey={range}
+          canLoadMoreHistory={canLoadMoreHistory}
+          onLoadMoreHistory={loadMoreHistory}
+        />
 
         {combined ? (
           <div className="mt-2 space-y-1 text-xs">
@@ -287,6 +319,12 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
           </div>
         ) : null}
 
+        {LOAD_MORE_RANGES.has(range) ? (
+          <div className="mt-2 text-xs text-muted-foreground">
+            向左滑到历史边缘会继续加载更早 K 线，当前约 {Math.round(historyDays / 365)} 年{canLoadMoreHistory ? "" : "（已到上限）"}。
+          </div>
+        ) : null}
+
         {lanes.length > 0 ? (
           <div className="mt-2 space-y-1 text-xs text-muted-foreground">
             <div className="flex flex-wrap items-center gap-3">
@@ -304,7 +342,27 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
   );
 }
 
-function ChartCanvas({ candles, lanes, probSeries, nineTurn, loading, error }: { candles: Candle[]; lanes: Lane[]; probSeries: { time: string; value: number }[]; nineTurn: NineTurnPoint[]; loading: boolean; error: string | null }) {
+function ChartCanvas({
+  candles,
+  lanes,
+  probSeries,
+  nineTurn,
+  loading,
+  error,
+  resetViewKey,
+  canLoadMoreHistory,
+  onLoadMoreHistory,
+}: {
+  candles: Candle[];
+  lanes: Lane[];
+  probSeries: { time: string; value: number }[];
+  nineTurn: NineTurnPoint[];
+  loading: boolean;
+  error: string | null;
+  resetViewKey: string;
+  canLoadMoreHistory: boolean;
+  onLoadMoreHistory: () => void;
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -312,6 +370,8 @@ function ChartCanvas({ candles, lanes, probSeries, nineTurn, loading, error }: {
   const probSeriesRef = useRef<ISeriesApi<"Baseline"> | null>(null);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const laneRefs = useRef<Partial<Record<StrategyCategory, ISeriesApi<"Histogram">>>>({});
+  const lastCleanRef = useRef<Candle[]>([]);
+  const lastResetViewKeyRef = useRef(resetViewKey);
   const clean = useMemo(() => sanitizeCandles(candles), [candles]);
 
   useEffect(() => {
@@ -373,6 +433,17 @@ function ChartCanvas({ candles, lanes, probSeries, nineTurn, loading, error }: {
   }, []);
 
   useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const handleVisibleRangeChange = (logicalRange: { from: number; to: number } | null) => {
+      if (!logicalRange || loading || !canLoadMoreHistory) return;
+      if (logicalRange.from < LOAD_MORE_EDGE_BARS) onLoadMoreHistory();
+    };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+    return () => chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+  }, [canLoadMoreHistory, loading, onLoadMoreHistory]);
+
+  useEffect(() => {
     if (!probSeriesRef.current) return;
     const m = new Map(probSeries.map((p) => [p.time, p.value]));
     // 与 clean 对齐（缺失的根跳过，避免时间不在序列中）
@@ -383,10 +454,25 @@ function ChartCanvas({ candles, lanes, probSeries, nineTurn, loading, error }: {
 
   useEffect(() => {
     if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
+    const timeScale = chartRef.current?.timeScale();
+    const previous = lastCleanRef.current;
+    const visibleRange = timeScale?.getVisibleLogicalRange();
+    const resetView = lastResetViewKeyRef.current !== resetViewKey || previous.length === 0;
+    const previousFirstTime = previous[0]?.time;
+    const prependedBars = !resetView && previousFirstTime ? clean.findIndex((c) => c.time === previousFirstTime) : 0;
+
     candleSeriesRef.current.setData(clean.map((c) => ({ time: c.time as Time, open: c.open, high: c.high, low: c.low, close: c.close })));
     volumeSeriesRef.current.setData(clean.map((c) => ({ time: c.time as Time, value: c.volume, color: c.close >= c.open ? `${UP_COLOR}55` : `${DOWN_COLOR}55` })));
-    if (clean.length > 0) chartRef.current?.timeScale().fitContent();
-  }, [clean]);
+    if (clean.length > 0) {
+      if (resetView) {
+        timeScale?.fitContent();
+      } else if (visibleRange && prependedBars > 0) {
+        timeScale?.setVisibleLogicalRange({ from: visibleRange.from + prependedBars, to: visibleRange.to + prependedBars });
+      }
+    }
+    lastCleanRef.current = clean;
+    lastResetViewKeyRef.current = resetViewKey;
+  }, [clean, resetViewKey]);
 
   useEffect(() => {
     if (!markersRef.current) return;
