@@ -173,8 +173,8 @@ export function fitWeights(train: FeatureRow[], opts: FitOpts = {}): ModelParams
   };
   const rng = mulberry32(opts.seed ?? 1);
 
-  const seed = [...DEFAULT_MODEL_PARAMS.weights];
-  while (seed.length < NF) seed.push(0);
+  const seed = DEFAULT_MODEL_PARAMS.weights.slice(0, NF);
+  while (seed.length < NF) seed.push(0); // 维数不足补 0；超出则截断（适配不同特征集）
   const pop: number[][] = [clampDim([...seed, DEFAULT_MODEL_PARAMS.maxTilt])];
   while (pop.length < POP) pop.push(Array.from({ length: DIM }, (_, k) => lo(k) + rng() * (hi(k) - lo(k))));
   let fit = pop.map(objective);
