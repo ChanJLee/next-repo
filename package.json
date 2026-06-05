@@ -18,7 +18,8 @@
     "model:monitor": "tsx scripts/monitor-calibration.ts",
     "model:cv": "tsx scripts/cv-model.ts",
     "model:featurize-xs": "tsx scripts/featurize-xs.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "factor:snapshot": "tsx scripts/build-factor-snapshot.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

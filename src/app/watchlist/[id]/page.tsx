@@ -11,6 +11,7 @@ import { BackfillButton } from "./_components/backfill-button";
 import { StrategiesPanel } from "./_components/strategies-panel";
 import { MarketModelPanel } from "./_components/market-model-panel";
 import { PositionSignalsPanel } from "./_components/position-signals-panel";
+import { FactorBadge } from "./_components/factor-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +45,9 @@ export default async function SymbolDetailPage({ params }: { params: { id: strin
               {sym.ticker}
               {sym.name ? <span className="ml-3 text-base font-normal text-muted-foreground">{sym.name}</span> : null}
             </h1>
-            <div className="text-xs text-muted-foreground mt-1">
-              {sym.strategies.length} 条策略 · 缓存 {sym._count.candles} 条日线 · {sym.enabled ? "启用" : "停用"}
+            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+              <span>{sym.strategies.length} 条策略 · 缓存 {sym._count.candles} 条日线 · {sym.enabled ? "启用" : "停用"}</span>
+              <FactorBadge ticker={sym.ticker} />
             </div>
           </div>
         </div>
