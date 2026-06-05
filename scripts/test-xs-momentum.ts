@@ -17,7 +17,17 @@ const MAX_SAMPLE_DATES = Number(process.argv[2] ?? 600);
 const STEP = Math.max(1, Number(process.argv[3] ?? 5));
 const H = Number(process.argv[4] ?? 21);
 const B = Number(process.argv[5] ?? 2000);
-const FORM_LONG = 252, FORM_SKIP = 21, MIN_SYMBOLS = 10, MIN_BARS = 320;
+// 截面因子：mom=12-1月动量；volmom=波动率调整动量；lowvol=低波动；combo=动量+低波等权(z-score)
+const SIGNAL = (process.argv[6] ?? "mom") as "mom" | "volmom" | "lowvol" | "combo";
+const FORM_LONG = 252, FORM_SKIP = 21, VOL_WIN = 63, MIN_SYMBOLS = 10, MIN_BARS = 320;
+
+function realizedVol(c: Candle[], i: number, win: number): number {
+  const r: number[] = [];
+  for (let j = i - win + 1; j <= i; j++) if (c[j - 1]?.close > 0 && c[j]?.close > 0) r.push(Math.log(c[j].close / c[j - 1].close));
+  if (r.length < 5) return 0.02;
+  const m = r.reduce((a, b) => a + b, 0) / r.length;
+  return Math.max(1e-4, Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / r.length));
+}
 
 const UNIVERSE = [
   "INTC", "T", "WBA", "PFE", "PYPL", "DIS", "BABA", "VZ", "CSCO", "IBM", "NKE", "MMM", "KHC", "PARA",
@@ -49,20 +59,29 @@ async function main() {
 
   const days: DayStat[] = [];
   for (const d of sampleDates) {
-    const recs: { mom: number; fwd: number }[] = [];
+    const recs: { mom: number; vol: number; fwd: number }[] = [];
     for (const s of syms) {
       const i = s.idxByDate.get(d);
       if (i == null || i < FORM_LONG || i + H >= s.candles.length) continue;
       const c = s.candles;
       if (!(c[i - FORM_LONG].close > 0) || !(c[i].close > 0)) continue;
       const mom = c[i - FORM_SKIP].close / c[i - FORM_LONG].close - 1; // 12−1 月动量
+      const vol = realizedVol(c, i, VOL_WIN);
       const fwd = c[i + H].close / c[i].close - 1;
-      recs.push({ mom, fwd });
+      recs.push({ mom, vol, fwd });
     }
     if (recs.length < MIN_SYMBOLS) continue;
-    recs.sort((a, b) => a.mom - b.mom);
-    const half = Math.floor(recs.length / 2);
-    const bot = recs.slice(0, half), top = recs.slice(recs.length - half);
+    // 截面 z-score（combo 用）
+    const zs = (v: number[]) => { const m = v.reduce((a, b) => a + b, 0) / v.length; const sd = Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length) || 1; return v.map((x) => (x - m) / sd); };
+    const zmom = zs(recs.map((r) => r.mom)), zvol = zs(recs.map((r) => r.vol));
+    const sig = recs.map((r, k) =>
+      SIGNAL === "mom" ? r.mom
+        : SIGNAL === "volmom" ? r.mom / r.vol
+        : SIGNAL === "lowvol" ? -r.vol
+        : zmom[k] - zvol[k]); // combo：高动量 + 低波动
+    const sorted = recs.map((_, k) => k).sort((a, b) => sig[a] - sig[b]).map((k) => recs[k]);
+    const half = Math.floor(sorted.length / 2);
+    const bot = sorted.slice(0, half), top = sorted.slice(sorted.length - half);
     const mean = (a: { fwd: number }[]) => a.reduce((x, r) => x + r.fwd, 0) / a.length;
     const upr = (a: { fwd: number }[]) => a.filter((r) => r.fwd > 0).length / a.length;
     days.push({ date: d, spread: mean(top) - mean(bot), upDiff: upr(top) - upr(bot), n: recs.length });
@@ -83,7 +102,7 @@ async function main() {
   const pPos = boot.filter((x) => x > 0).length / B;
   const pct = (x: number) => `${x >= 0 ? "+" : ""}${(x * 100).toFixed(2)}%`;
 
-  console.log(`\n── 经典横截面动量（12−1 月），${days.length} 个截面日，持有 ${H} 日 ──`);
+  console.log(`\n── 截面因子=${SIGNAL}（12−1动量/波调动量/低波/组合），${days.length} 个截面日，持有 ${H} 日 ──`);
   console.log(`  多空 spread（高动量组 − 低动量组 未来收益）均值 = ${pct(meanSpread)} / ${H}日`);
   console.log(`  上涨率差（高 − 低）= ${(meanUpDiff * 100).toFixed(1)}pp`);
   console.log(`  spread 95% CI = [${pct(lo)}, ${pct(hi)}]   P(spread>0) = ${(pPos * 100).toFixed(1)}%`);
