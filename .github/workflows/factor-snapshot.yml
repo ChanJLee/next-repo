@@ -1,0 +1,56 @@
+name: Refresh Factor Snapshot
+
+# 每周重算 value+momentum 横截面快照并提交回仓（基本面季度变、动量月度变，每周足够新）。
+# 用 EDGAR(无需密钥，仅 UA) + Stooq(内置 apikey)；CI 无库时脚本降级为仅参考池。
+on:
+  schedule:
+    - cron: "30 6 * * 1" # 每周一 06:30 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: factor-snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: write # 允许把刷新后的快照 commit 回 main
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # SEC 要求 UA 带联系方式；可在仓库 secret 里设 SEC_USER_AGENT 覆盖默认
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT || 'next-repo research (wuliyichen@gmail.com)' }}
+      # 占位库 URL：让 Prisma 客户端能构造；脚本查不到表会优雅降级为仅参考池
+      DATABASE_URL: "file:./ci.db"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild snapshot
+        run: pnpm factor:snapshot
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- src/lib/data/factor-snapshot.json; then
+            echo "快照无变化，跳过提交"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/data/factor-snapshot.json
+          git commit -m "chore(factor): weekly value+momentum snapshot refresh
+
+          Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+          git push

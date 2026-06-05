@@ -23,13 +23,21 @@ const REFERENCE = [
   "JNJ","UNH","PFE","MRK","ABBV","TMO","ABT","LLY",
   "KO","PG","WMT","PEP","MCD","NKE","COST","HD","LOW","DIS",
   "CAT","GE","HON","UPS","BA","MMM","XOM","CVX","COP","T","VZ",
+  "TSLA",
 ];
 
 async function main() {
   const today = new Date().toISOString().slice(0, 10);
-  const wl = await prisma.symbol.findMany({ select: { ticker: true } });
-  const universe = [...new Set([...REFERENCE, ...wl.map((s) => s.ticker.toUpperCase())])];
-  console.log(`参考池 ${universe.length} 个（含 watchlist ${wl.length}），asOf=${today}`);
+  // watchlist 标的并入参考池；CI 无库时优雅降级为仅参考池。
+  let wlTickers: string[] = [];
+  try {
+    const wl = await prisma.symbol.findMany({ select: { ticker: true } });
+    wlTickers = wl.map((s) => s.ticker.toUpperCase());
+  } catch (e) {
+    console.log(`DB 不可用（仅用参考池）：${e instanceof Error ? e.message : e}`);
+  }
+  const universe = [...new Set([...REFERENCE, ...wlTickers])];
+  console.log(`参考池 ${universe.length} 个（含 watchlist ${wlTickers.length}），asOf=${today}`);
 
   const raw: { ticker: string; bm: number | null; mom: number | null }[] = [];
   for (const tk of universe) {
@@ -87,7 +95,7 @@ async function main() {
   console.log(`\n写入 ${path}：${N} 标的有效（共 ${universe.length}）`);
   console.log(`最便宜+最强动量 Top5: ${items.slice(-5).reverse().map((x) => `${x.ticker}(${x.percentile})`).join(", ")}`);
   console.log(`最贵+最弱 Bottom5: ${items.slice(0, 5).map((x) => `${x.ticker}(${x.percentile})`).join(", ")}`);
-  await prisma.$disconnect();
+  await prisma.$disconnect().catch(() => {});
 }
 
 main();
