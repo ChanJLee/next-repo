@@ -24,6 +24,8 @@ const MAX_SAMPLE_DATES = Number(process.argv[2] ?? 600);
 const STEP = Math.max(1, Number(process.argv[3] ?? 5));
 const HORIZON = Number(process.argv[4] ?? 20);
 const OUT_FILE = process.argv[5] ?? "feature-cache-xs.json";
+// 模式：xs=截面 rank 标签 + 当日去均值特征；abs=绝对涨跌标签 + 原始特征（用于在中性池上测动量/反转）
+const MODE = (process.argv[6] ?? "xs") as "xs" | "abs";
 const MIN_SYMBOLS = 10;     // 当日至少这么多标的才能算截面 rank
 const MIN_BARS = 320;       // 标的至少这么多 K 线才纳入
 const W = { trend: 1, reversion: 1, pattern: 1 } as const;
@@ -78,6 +80,13 @@ async function main() {
       if (!feature) continue;
       const fwd = s.candles[i].close > 0 ? s.candles[i + HORIZON].close / s.candles[i].close - 1 : 0;
       recs.push({ ticker: s.ticker, idx: i, f: feature, fwd });
+    }
+    if (MODE === "abs") {
+      // 绝对模式：原始特征 + 绝对涨跌标签（不要求凑齐截面）
+      for (const r of recs) {
+        rows.push({ sym: r.ticker, idx: r.idx, date: d, f: r.f.map((v) => +v.toFixed(5)), y: r.fwd > 0 ? 1 : 0, base: 0 });
+      }
+      done += 1; continue;
     }
     if (recs.length < MIN_SYMBOLS) continue;
     // 截面去均值（每维减当日均值）→ 纯相对特征
