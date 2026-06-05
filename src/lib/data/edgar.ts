@@ -89,3 +89,23 @@ export function pitFact(
     f.end > best.end || (f.end === best.end && f.filed > best.filed) ? f : best,
   );
 }
+
+const dayDiff = (a: string, b: string) => Math.abs((Date.parse(a) - Date.parse(b)) / 86400_000);
+
+/**
+ * Point-in-time 年度流量（利润表类，如 NetIncomeLoss/Revenues/GrossProfit）：
+ * 在 filed ≤ asOf 的事实里，只取「年度区间」（end−start ≈ 365 天）的最新一期。
+ * 用年度（10-K）口径而非拼 TTM —— 稳健、避免季度区间拼接的坑，是经典价值因子做法。
+ */
+export function pitAnnualFlow(facts: CompanyFacts, concept: string, unit: string, asOf: string, taxonomy = "us-gaap"): XbrlFact | null {
+  const arr = factSeries(facts, concept, unit, taxonomy)
+    .filter((f) => f.filed <= asOf && f.start && dayDiff(f.end, f.start) >= 330 && dayDiff(f.end, f.start) <= 400);
+  if (arr.length === 0) return null;
+  return arr.reduce((best, f) => (f.end > best.end || (f.end === best.end && f.filed > best.filed) ? f : best));
+}
+
+/** 多个候选概念里取第一个有值的（不同公司用不同 XBRL 标签，如 Revenues vs RevenueFromContract...）。 */
+export function pitFirst<T>(getters: (() => T | null)[]): T | null {
+  for (const g of getters) { const v = g(); if (v != null) return v; }
+  return null;
+}
