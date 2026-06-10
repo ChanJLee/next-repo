@@ -12,6 +12,7 @@ import { StrategiesPanel } from "./_components/strategies-panel";
 import { MarketModelPanel } from "./_components/market-model-panel";
 import { PositionSignalsPanel } from "./_components/position-signals-panel";
 import { FactorBadge } from "./_components/factor-badge";
+import { getFactorRank, factorMeta } from "@/lib/factor";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ export default async function SymbolDetailPage({ params }: { params: { id: strin
   if (!sym) notFound();
 
   const enabledStrategies = sym.strategies.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, kind: s.kind, params: s.params }));
+  const factorRank = getFactorRank(sym.ticker);
+  const fMeta = factorMeta();
 
   return (
     <div className="space-y-6">
@@ -58,7 +61,13 @@ export default async function SymbolDetailPage({ params }: { params: { id: strin
 
       <PositionSignalsPanel symbolId={sym.id} />
 
-      <MarketModelPanel symbolId={sym.id} strategies={enabledStrategies} />
+      <MarketModelPanel
+        symbolId={sym.id}
+        strategies={enabledStrategies}
+        factorRank={factorRank}
+        factorAsOf={fMeta.asOf}
+        factorUniverse={fMeta.universeSize}
+      />
 
       <StrategiesPanel
         symbolId={sym.id}

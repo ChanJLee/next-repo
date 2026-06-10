@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { CATEGORY_LABEL } from "@/lib/strategies/types";
 import type { Candle } from "@/lib/data/yahoo";
+import type { FactorRank } from "@/lib/factor";
 import { evalStrategies, combinedProbability, marketState, alignMarketCloses, type ModelStrategy, type CombinedRead, type MarketState } from "./market-model";
 
 /** 拉大盘(SPY)收盘做跨资产条件特征；失败返回 null（模型自动退化为基础特征）。 */
@@ -24,12 +25,6 @@ async function fetchMarketCloses(days: number): Promise<Map<string, number> | nu
 // 估准确率要长历史，5 年（已回填）
 const MODEL_DAYS = 1825;
 
-function readLabel(p: number): { text: string; cls: string } {
-  if (p >= 0.6) return { text: "偏多", cls: "text-green-700" };
-  if (p <= 0.4) return { text: "偏空", cls: "text-red-700" };
-  return { text: "中性 / 分歧", cls: "text-amber-700" };
-}
-
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
 
 const REGIME_CLS: Record<string, string> = {
@@ -38,7 +33,26 @@ const REGIME_CLS: Record<string, string> = {
   random: "bg-slate-100 text-slate-600",
 };
 
-export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; strategies: ModelStrategy[] }) {
+// valmom 中期相对排名：唯一过样本外验证的"中期方向"类信号（截面相对，非单股择时）。
+function factorWord(p: number): { text: string; cls: string } {
+  if (p >= 67) return { text: "偏强", cls: "text-green-700" };
+  if (p <= 33) return { text: "偏弱", cls: "text-red-700" };
+  return { text: "中性", cls: "text-amber-700" };
+}
+
+export function MarketModelPanel({
+  symbolId,
+  strategies,
+  factorRank,
+  factorAsOf,
+  factorUniverse,
+}: {
+  symbolId: number;
+  strategies: ModelStrategy[];
+  factorRank: FactorRank | null;
+  factorAsOf: string;
+  factorUniverse: number;
+}) {
   const [read, setRead] = useState<CombinedRead | null>(null);
   const [regime, setRegime] = useState<MarketState | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "empty" | "failed">("loading");
@@ -73,16 +87,18 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
     return () => { aborted = true; };
   }, [symbolId, strategies]);
 
-  const pct = read ? Math.round(read.pUp * 100) : null;
-  const label = read ? readLabel(read.pUp) : null;
+  const fw = factorRank ? factorWord(factorRank.percentile) : null;
+  const baseRatePct = read ? Math.round(read.pUp * 100) : null;
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">综合多空</CardTitle>
-          {state === "ready" && label ? (
-            <span className={cn("text-sm font-semibold", label.cls)}>{label.text} · {pct}%</span>
+          <CardTitle className="text-base">中期定位 / 趋势环境</CardTitle>
+          {fw ? (
+            <span className={cn("text-sm font-semibold", fw.cls)}>价值+动量 {factorRank!.percentile} · {fw.text}</span>
+          ) : regime ? (
+            <span className="text-xs text-muted-foreground">{regime.label}</span>
           ) : null}
         </div>
       </CardHeader>
@@ -93,28 +109,43 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
 
         {state === "ready" && read ? (
           <>
-            {/* 市场状态（Hurst） */}
+            {/* ① 中期相对排名（valmom）—— 唯一过样本外验证的"中期方向"类信号 */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium">价值+动量 · 中期相对排名</span>
+                {factorRank ? (
+                  <span className="text-muted-foreground">B/M {factorRank.bm} · 12-1动量 {(factorRank.mom * 100).toFixed(0)}%</span>
+                ) : <span className="text-muted-foreground">不在参考池</span>}
+              </div>
+              {factorRank ? (
+                <>
+                  <div className="relative h-3 w-full overflow-hidden rounded bg-gradient-to-r from-red-200 via-amber-100 to-green-200">
+                    <div className="absolute top-0 h-3 w-0.5 bg-foreground" style={{ left: `${factorRank.percentile}%` }} />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>偏弱(贵/弱)</span><span>参考池 {factorUniverse} 只 · asOf {factorAsOf}</span><span>偏强(便宜/强)</span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">该标的不在价值+动量参考池（ETF / 外国发行人 / 无基本面）。</p>
+              )}
+            </div>
+
+            {/* ② 市场状态（Hurst）：趋势态顺势可续、震荡态追涨易打脸 */}
             {regime ? (
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-muted-foreground">市场状态</span>
+              <div className="flex flex-wrap items-center gap-2 border-t pt-2 text-xs">
+                <span className="text-muted-foreground">趋势环境</span>
                 <span className={cn("rounded px-2 py-0.5", REGIME_CLS[regime.regime])}>{regime.label}</span>
                 {regime.hurst != null ? <span className="text-muted-foreground">Hurst {regime.hurst.toFixed(2)}</span> : null}
                 <span className="text-muted-foreground">
-                  {regime.regime === "trend" ? "· 放大趋势组权重" : regime.regime === "reversion" ? "· 放大均值回归组权重" : "· 整体降权"}
+                  {regime.regime === "trend" ? "· 趋势态：动量更易延续" : regime.regime === "reversion" ? "· 震荡态：追涨易打脸、回调更易修复" : "· 随机态：无明显惯性"}
                 </span>
               </div>
             ) : null}
 
-            {/* 概率条：左空右多 */}
-            <div className="space-y-1">
-              <div className="relative h-3 w-full overflow-hidden rounded bg-gradient-to-r from-red-200 via-slate-200 to-green-200">
-                <div className="absolute top-0 h-3 w-0.5 bg-foreground" style={{ left: `${pct}%` }} />
-              </div>
-              <div className="flex justify-between text-[10px] text-muted-foreground"><span>偏空</span><span>中性</span><span>偏多</span></div>
-            </div>
-
-            {/* 分类拆解 */}
-            <div className="space-y-1.5">
+            {/* ③ 策略结构拆解（仅展示结构，非方向预测） */}
+            <div className="space-y-1.5 border-t pt-2">
+              <div className="text-[11px] text-muted-foreground">策略结构（各组当前看多/看空，仅结构展示）</div>
               {read.byCategory.map((c) => {
                 const weightedEvidence = c.evidence * c.weight;
                 const catP = Math.round(sigmoid(weightedEvidence) * 100);
@@ -134,11 +165,17 @@ export function MarketModelPanel({ symbolId, strategies }: { symbolId: number; s
               })}
             </div>
 
+            {/* ④ 基准上涨率：明确标注为"非方向预测"，不再当多空结论 */}
+            <div className="flex items-center justify-between border-t pt-2 text-[11px] text-muted-foreground">
+              <span>历史基准上涨率（{baseRatePct}%）</span>
+              <span>≈ 无条件涨率，非方向预测</span>
+            </div>
+
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              当前综合多空：当前读数，用最新 K 线、当前策略状态给出一个概率参考。
-            </p>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              谦逊概率模型：走查式样本外回测显示，日线技术特征对未来 10 日方向几乎没有稳定边际，强趋势末端甚至轻微反预测。因此 P(多) 以历史无条件上涨率（基准率）为锚，只做小幅偏移、刻意低自信。仅辅助判断，非投资建议。
+              这块回答<strong>“相对定位 + 趋势环境”</strong>，不预测“这只票要启动一波行情”。多轮走查样本外检验
+              （方向概率 / 绝对动量 / 趋势突破 / 盈余漂移，见 <code>docs/factor-research.md</code>）都证实：单股中期
+              <strong>方向与择时</strong>在日线数据里不可预测、不优于基准率。唯一站得住的中期信号是上面的
+              <strong>价值+动量截面相对排名</strong>（+0.91%/63d，CI 排除 0）——它说“同样要买，谁更有据”，而非保证涨跌。仅辅助判断，非投资建议。
             </p>
           </>
         ) : null}
