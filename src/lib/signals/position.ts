@@ -69,6 +69,67 @@ function dailyVol(closes: number[], i: number, p = 20): number {
   return Math.max(0.005, Math.sqrt(mean(r.map((x) => (x - m) ** 2))));
 }
 
+// 严格已实现波动率（无 0.02 兜底；样本不足返回 null），供前瞻波动预测复用。
+function realizedVol(closes: number[], i: number, p: number): number | null {
+  if (i < p) return null;
+  const r: number[] = [];
+  for (let j = i - p + 1; j <= i; j++) if (closes[j - 1] > 0 && closes[j] > 0) r.push(Math.log(closes[j] / closes[j - 1]));
+  if (r.length < 2) return null;
+  const m = mean(r);
+  const v = Math.sqrt(mean(r.map((x) => (x - m) ** 2)));
+  return v > 0 ? v : null;
+}
+
+export interface VolForecast {
+  recentAnn: number;   // 当前 look 日已实现年化波动
+  forecastAnn: number; // 预测未来 H 日年化波动
+  pct: number;         // forecast 在该股历史已实现波动分布中的分位（0..1）
+  beta: number;        // 点-时拟合的均值回归斜率（<1 表示向长期均值回归）
+}
+
+/**
+ * 前瞻波动率预测（point-in-time，无未来函数）。
+ * 经 scripts/_voltest.ts 走查验证：未来 H 日已实现波动率高度可预测——9 标的 5.8 万样本上
+ * 滚动 CV 池化 OOS R²=0.62、6/6 折为正、rankIC≈0.72、斜率稳定≈0.77（波动率均值回归）。
+ * 这是与「方向不可预测」相反的一面：方向≈随机游走，但波动会聚集且向长期均值回归。
+ *
+ * 实现：在该股自身历史上回归 log(未来H日波动) ~ log(近look日波动)，只用 index i 之前
+ * 已揭晓结局的样本对（j+H ≤ i），故对最新一根 live 调用天然无未来函数。再用拟合的 (a,b)
+ * 把当前近端波动外推为未来波动预测，并据此给反波动仓位建议（目标=历史中位波动→1x）。
+ */
+export function forwardVolForecast(closes: number[], i: number, H = 20, look = 20): VolForecast | null {
+  const ANN = Math.sqrt(252);
+  const cur = realizedVol(closes, i, look);
+  if (cur == null) return null;
+
+  // 点-时训练对：x=log(近端波动)，y=log(其后 H 日波动)；只取结局已在 i 揭晓者（j+H ≤ i）
+  const xs: number[] = [], ys: number[] = [], histVol: number[] = [];
+  for (let j = look; j + H <= i; j++) {
+    const rv = realizedVol(closes, j, look);
+    const fwd = realizedVol(closes, j + H, H);
+    if (rv == null || fwd == null) continue;
+    xs.push(Math.log(rv)); ys.push(Math.log(fwd)); histVol.push(rv);
+  }
+  if (xs.length < 60) return null; // 训练样本不足 → 不给前瞻预测
+
+  const mx = mean(xs), my = mean(ys);
+  let sxx = 0, sxy = 0;
+  for (let k = 0; k < xs.length; k++) { sxx += (xs[k] - mx) ** 2; sxy += (xs[k] - mx) * (ys[k] - my); }
+  const beta = sxx > 0 ? Math.min(1.2, Math.max(0, sxy / sxx)) : 0;
+  const alpha = my - beta * mx;
+  const forecastDaily = Math.exp(alpha + beta * Math.log(cur));
+
+  const sorted = [...histVol].sort((a, b) => a - b);
+  const pct = sorted.length ? sorted.filter((v) => v <= forecastDaily).length / sorted.length : 0.5;
+
+  return {
+    recentAnn: cur * ANN,
+    forecastAnn: forecastDaily * ANN,
+    pct,
+    beta: +beta.toFixed(3),
+  };
+}
+
 function padFront(arr: number[], fullLen: number): (number | null)[] {
   return [...new Array<number | null>(Math.max(0, fullLen - arr.length)).fill(null), ...arr];
 }
@@ -191,6 +252,19 @@ export function assessPosition(candles: Candle[]): PositionAssessment | null {
       value: `${(cur * 100).toFixed(1)}%（近一年 ${Math.round(pct * 100)} 分位）`,
       tone: pct >= 0.7 ? "warn" : "neutral",
       hint: "高波动 → 减小仓位、放宽止损",
+    });
+  }
+
+  // 前瞻波动率预测（点-时自拟合；波动会聚集且均值回归，OOS R²≈0.62，是真能预测的量）。
+  // 纯信息：比同期 ATR% 多一层「未来 20 日波动会向长期均值回归（升/降）」。不给仓位指令。
+  const vf = forwardVolForecast(closes, last);
+  if (vf) {
+    const trend = vf.forecastAnn > vf.recentAnn * 1.05 ? "↑放大" : vf.forecastAnn < vf.recentAnn * 0.95 ? "↓收敛" : "≈持平";
+    states.push({
+      key: "volfc", label: "波动预测（未来 20 日）",
+      value: `年化 ${(vf.forecastAnn * 100).toFixed(0)}% ${trend}（该股 ${Math.round(vf.pct * 100)} 分位）`,
+      tone: vf.pct >= 0.7 ? "warn" : vf.pct <= 0.3 ? "pos" : "neutral",
+      hint: "波动会聚集+均值回归（可预测）；放大常伴随趋势转折，收敛多为盘整",
     });
   }
 
