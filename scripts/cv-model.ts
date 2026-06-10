@@ -11,8 +11,11 @@
  * 输出：每折 skill、池化样本外 skill、按日期分块 CI、以及（对照）按行 CI——
  *       看 CI 是否把 0 排除在外，回答「现在这点 skill 到底是不是噪声」。
  *
- * 用法：pnpm exec tsx scripts/cv-model.ts [λ=0.02] [自助次数=2000] [seed=1]
+ * 用法：pnpm exec tsx scripts/cv-model.ts [λ=0.02] [自助次数=2000] [seed=1] [缓存文件] [块长=1]
  *   先跑 scripts/featurize.ts 生成 data/feature-cache.json。
+ *   块长>1 → 自助改为重采样【连续 块长 个取样日】的移动块（moving block bootstrap）：
+ *   当标签视野 > 取样步长时相邻样本重叠（如 H=63、步长 10 ≈ 6 倍重叠），单日分块的
+ *   CI 会因序列相关偏窄；块长应 ≥ ceil(视野/步长)×2（如 H=63、步长 10 → 块长 13）。
  */
 import { join } from "node:path";
 import { loadCache, fitWeights, predict, mulberry32, type FeatureRow } from "./_fitlib";
@@ -21,6 +24,7 @@ const LAMBDA = Number(process.argv[2] ?? 0.02);
 const B = Number(process.argv[3] ?? 2000);
 const SEED = Number(process.argv[4] ?? 1);
 const CACHE_FILE = process.argv[5]; // 可选：评估别的缓存文件（实验用），默认走生产缓存
+const BLOCK = Math.max(1, Number(process.argv[6] ?? 1)); // 连续日期块长（取样日个数）
 // 扩窗滚动：训练用 [0, cut_i)，测试用 [cut_i, cut_{i+1})。首折至少 40% 数据打底。
 const CUTS = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
@@ -73,14 +77,20 @@ function main() {
   console.log(`\n── 池化样本外 skill = ${pooled >= 0 ? "+" : ""}${pooled.toFixed(4)}（n=${oos.length}）──`);
 
   const rng = mulberry32(SEED);
-  // 按日期分块：重采样整天，保留当天全部标的（吸收截面相关）
+  // 按日期分块：重采样整天，保留当天全部标的（吸收截面相关）。
+  // BLOCK>1 → 移动块自助：每次抽「连续 BLOCK 个取样日」，再吸收标签重叠造成的序列相关。
   const byDate = new Map<string, Pred[]>();
   for (const r of oos) (byDate.get(r.date) ?? byDate.set(r.date, []).get(r.date)!).push(r);
-  const dates = [...byDate.keys()];
+  const dates = [...byDate.keys()].sort();
+  const nBlocks = Math.ceil(dates.length / BLOCK);
+  const maxStart = Math.max(0, dates.length - BLOCK);
   const blockSkills: number[] = [];
   for (let b = 0; b < B; b++) {
     const sample: Pred[] = [];
-    for (let k = 0; k < dates.length; k++) sample.push(...byDate.get(dates[Math.floor(rng() * dates.length)])!);
+    for (let k = 0; k < nBlocks; k++) {
+      const s = Math.floor(rng() * (maxStart + 1));
+      for (let j = s; j < Math.min(dates.length, s + BLOCK); j++) sample.push(...byDate.get(dates[j])!);
+    }
     blockSkills.push(skillOf(sample));
   }
   // 对照：按行重采样（忽略截面相关，会偏窄）
@@ -95,7 +105,8 @@ function main() {
   const blockPos = blockSkills.filter((s) => s > 0).length / B;
   const rowPos = rowSkills.filter((s) => s > 0).length / B;
   console.log("\n── 自助 95% 置信区间（skill）──");
-  console.log(`  按日期分块（诚实）: [${fmt(pct(blockSkills, 0.025))}, ${fmt(pct(blockSkills, 0.975))}]  中位=${fmt(pct(blockSkills, 0.5))}  P(skill>0)=${(blockPos * 100).toFixed(1)}%`);
+  const blockLabel = BLOCK > 1 ? `连续 ${BLOCK} 日移动块（诚实）` : "按日期分块（诚实）";
+  console.log(`  ${blockLabel}: [${fmt(pct(blockSkills, 0.025))}, ${fmt(pct(blockSkills, 0.975))}]  中位=${fmt(pct(blockSkills, 0.5))}  P(skill>0)=${(blockPos * 100).toFixed(1)}%`);
   console.log(`  按行（偏窄，对照）: [${fmt(pct(rowSkills, 0.025))}, ${fmt(pct(rowSkills, 0.975))}]  中位=${fmt(pct(rowSkills, 0.5))}  P(skill>0)=${(rowPos * 100).toFixed(1)}%`);
 
   // ---- 收缩扫描：tilt × s 的样本外 skill，找最优全局收缩 s*（用于把生产 tilt 收到诚实水平）----
