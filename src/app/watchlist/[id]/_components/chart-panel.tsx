@@ -282,15 +282,19 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         {combined ? (
           <div className="mt-2 space-y-1 text-xs">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground">波动预测（未来 20 日年化）</span>
+              {/* 图例：紫线样本，和图中曲线一一对应 */}
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-0.5 w-5 rounded" style={{ backgroundColor: VOL_LINE }} />
+                <span className="font-medium" style={{ color: VOL_LINE }}>紫线 · 波动预测（未来 20 日年化）</span>
+              </span>
               <span className="font-semibold" style={{ color: VOL_LINE }}>
                 {combined.volAnn != null ? `${Math.round(combined.volAnn * 100)}%` : "—"}
               </span>
               <span className="text-muted-foreground">· {combined.regimeLabel}</span>
             </div>
             <div className="text-muted-foreground">
-              图中紫线＝逐根前瞻波动率预测（点-时、无未来函数；波动会聚集且均值回归，是验证过的时变信号）。
-              升＝风险环境趋紧、常伴随趋势转折；降＝趋于盘整。它预测<strong>波动幅度</strong>，不预测涨跌方向。
+              图中段<span className="font-medium" style={{ color: VOL_LINE }}>紫线</span>＝逐根前瞻波动率预测（点-时、无未来函数；波动会聚集且均值回归，是验证过的时变信号）。
+              线<strong>升</strong>＝风险环境趋紧、常伴随趋势转折；线<strong>降</strong>＝趋于盘整。它预测<strong>波动幅度</strong>，不预测涨跌方向。
             </div>
           </div>
         ) : null}
