@@ -130,6 +130,39 @@ export function forwardVolForecast(closes: number[], i: number, H = 20, look = 2
   };
 }
 
+/**
+ * 逐根前瞻波动率预测序列（点-时、无未来函数）——给图表画"风险环境曲线"用。
+ * 等价于在每根 i 调用 forwardVolForecast，但用增量回归（随 i 推进只新增一对已揭晓的训练样本）
+ * 把整体复杂度降到 ~O(n·look)。返回每根的预测年化波动；训练样本不足处为 null。
+ */
+export function forwardVolSeries(closes: number[], H = 20, look = 20): (number | null)[] {
+  const ANN = Math.sqrt(252);
+  const n = closes.length;
+  const out: (number | null)[] = new Array(n).fill(null);
+  let cnt = 0, sx = 0, sy = 0, sxx = 0, sxy = 0; // log(近端波动)→log(其后H日波动) 的回归累计量
+  for (let i = 0; i < n; i++) {
+    // 新揭晓的训练对：j=i-H 的结局（i 这根的 H 日波动）此刻才已知
+    const j = i - H;
+    if (j >= look) {
+      const rvJ = realizedVol(closes, j, look);
+      const fwdJ = realizedVol(closes, i, H);
+      if (rvJ != null && fwdJ != null) {
+        const x = Math.log(rvJ), y = Math.log(fwdJ);
+        cnt++; sx += x; sy += y; sxx += x * x; sxy += x * y;
+      }
+    }
+    if (cnt < 60) continue;
+    const cur = realizedVol(closes, i, look);
+    if (cur == null) continue;
+    const mx = sx / cnt, my = sy / cnt;
+    const denom = sxx - cnt * mx * mx;
+    const beta = denom > 0 ? Math.min(1.2, Math.max(0, (sxy - cnt * mx * my) / denom)) : 0;
+    const alpha = my - beta * mx;
+    out[i] = Math.exp(alpha + beta * Math.log(cur)) * ANN;
+  }
+  return out;
+}
+
 function padFront(arr: number[], fullLen: number): (number | null)[] {
   return [...new Array<number | null>(Math.max(0, fullLen - arr.length)).fill(null), ...arr];
 }

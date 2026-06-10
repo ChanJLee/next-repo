@@ -6,7 +6,7 @@ import {
   createSeriesMarkers,
   CandlestickSeries,
   HistogramSeries,
-  BaselineSeries,
+  LineSeries,
   ColorType,
   type IChartApi,
   type ISeriesApi,
@@ -21,21 +21,9 @@ import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
 import { CATEGORY_LABEL, STRATEGY_CATEGORY, type StrategyCategory, type StrategyKind } from "@/lib/strategies/types";
 import type { Candle as ModelCandle } from "@/lib/data/yahoo";
-import { evalStrategies, combinedProbabilitySeries, marketState, alignMarketCloses, type ModelStrategy } from "./market-model";
+import { evalStrategies, marketState, type ModelStrategy } from "./market-model";
+import { forwardVolSeries } from "@/lib/signals/position";
 
-/** 拉大盘(SPY)收盘做跨资产条件特征；失败返回 null（模型自动退化为基础特征）。 */
-async function fetchMarketCloses(days: number): Promise<Map<string, number> | null> {
-  try {
-    const res = await fetch(`/api/market/candles?ticker=SPY&days=${days}`);
-    if (!res.ok) return null;
-    const j = await res.json();
-    const m = new Map<string, number>();
-    for (const p of j.closes ?? []) m.set(p.time, p.close);
-    return m.size > 0 ? m : null;
-  } catch {
-    return null;
-  }
-}
 import { computeTDSequential } from "@/lib/indicators/nine-turn";
 
 interface Candle {
@@ -91,11 +79,7 @@ function levelColor(level: string | undefined): string {
   return "#cbd5e1";
 }
 
-function pLabel(p: number): { text: string; cls: string } {
-  if (p >= 0.6) return { text: "偏多", cls: "text-green-700" };
-  if (p <= 0.4) return { text: "偏空", cls: "text-red-700" };
-  return { text: "中性", cls: "text-amber-700" };
-}
+const VOL_LINE = "#7c3aed"; // 波动预测曲线（紫）
 
 function sanitizeCandles(candles: Candle[]): Candle[] {
   const byTime = new Map<string, Candle>();
@@ -123,8 +107,8 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
-  const [combined, setCombined] = useState<{ pUp: number; regimeLabel: string } | null>(null);
-  const [probSeries, setProbSeries] = useState<{ time: string; value: number }[]>([]);
+  const [combined, setCombined] = useState<{ volAnn: number | null; regimeLabel: string } | null>(null);
+  const [volSeries, setVolSeries] = useState<{ time: string; value: number }[]>([]);
   const [nineTurn, setNineTurn] = useState<NineTurnPoint[]>([]);
   const [showNine, setShowNine] = useState(true);
 
@@ -149,7 +133,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
     setHistoryDays(RANGE_DAYS[nextRange]);
     setCandles([]);
     setLaneSource([]);
-    setProbSeries([]);
+    setVolSeries([]);
     setNineTurn([]);
     setCombined(null);
   }, [range]);
@@ -196,20 +180,15 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
             items: disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), level: e.levels[k] })),
           })),
         );
-        // 逐根综合多空概率曲线
-        if (evals.length > 0) {
-          const st = marketState(model.map((c) => c.close));
-          // 跨资产条件：对齐 SPY 到本标的 K 线（拉取失败则 mkt=undefined，退化为基础模型）
-          const spyMap = await fetchMarketCloses(fetchDays);
-          if (aborted) return;
-          const mkt = spyMap ? alignMarketCloses(model, spyMap) : undefined;
-          const arr = combinedProbabilitySeries(model, evals, st.weights, 0, model.length, undefined, mkt);
-          setProbSeries(disp.map((c, k) => ({ time: c.date.toISOString().slice(0, 10), value: arr[k] })));
-          setCombined({ pUp: arr[arr.length - 1] ?? 0.5, regimeLabel: st.label });
-        } else {
-          setProbSeries([]);
-          setCombined(null);
-        }
+        // 逐根前瞻波动率预测曲线（验证过的时变信号；取代旧的≈基准率平直概率曲线）
+        const closes = model.map((c) => c.close);
+        const st = marketState(closes);
+        const vol = forwardVolSeries(closes);
+        const volPts = disp
+          .map((c, k) => ({ time: c.date.toISOString().slice(0, 10), value: vol[k] }))
+          .filter((p): p is { time: string; value: number } => p.value != null);
+        setVolSeries(volPts);
+        setCombined({ volAnn: volPts.at(-1)?.value ?? null, regimeLabel: st.label });
       })
       .catch((e) => { if (!aborted) setError(e instanceof Error ? e.message : "网络错误"); })
       .finally(() => { if (!aborted) setLoading(false); });
@@ -290,7 +269,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         <ChartCanvas
           candles={candles}
           lanes={lanes}
-          probSeries={probSeries}
+          volSeries={volSeries}
           nineTurn={showNine ? nineTurn : []}
           loading={loading}
           error={error}
@@ -303,12 +282,15 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
         {combined ? (
           <div className="mt-2 space-y-1 text-xs">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground">当前综合多空</span>
-              <span className={cn("font-semibold", pLabel(combined.pUp).cls)}>{pLabel(combined.pUp).text} {Math.round(combined.pUp * 100)}%</span>
+              <span className="text-muted-foreground">波动预测（未来 20 日年化）</span>
+              <span className="font-semibold" style={{ color: VOL_LINE }}>
+                {combined.volAnn != null ? `${Math.round(combined.volAnn * 100)}%` : "—"}
+              </span>
               <span className="text-muted-foreground">· {combined.regimeLabel}</span>
             </div>
             <div className="text-muted-foreground">
-              图下概率曲线：历史拟合 / 模型校准，用来看概率是否和后续走势同向。
+              图中紫线＝逐根前瞻波动率预测（点-时、无未来函数；波动会聚集且均值回归，是验证过的时变信号）。
+              升＝风险环境趋紧、常伴随趋势转折；降＝趋于盘整。它预测<strong>波动幅度</strong>，不预测涨跌方向。
             </div>
           </div>
         ) : null}
@@ -343,7 +325,7 @@ export function SymbolChartPanel({ symbolId, ticker, strategies }: { symbolId: n
 function ChartCanvas({
   candles,
   lanes,
-  probSeries,
+  volSeries,
   nineTurn,
   loading,
   error,
@@ -354,7 +336,7 @@ function ChartCanvas({
 }: {
   candles: Candle[];
   lanes: Lane[];
-  probSeries: { time: string; value: number }[];
+  volSeries: { time: string; value: number }[];
   nineTurn: NineTurnPoint[];
   loading: boolean;
   error: string | null;
@@ -367,7 +349,7 @@ function ChartCanvas({
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
-  const probSeriesRef = useRef<ISeriesApi<"Baseline"> | null>(null);
+  const volSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const laneRefs = useRef<Partial<Record<StrategyCategory, ISeriesApi<"Histogram">>>>({});
   const lastCleanRef = useRef<Candle[]>([]);
@@ -394,16 +376,14 @@ function ChartCanvas({
     // 神奇九转的计数数字挂在 K 线上下（markers）
     markersRef.current = createSeriesMarkers(candleSeriesRef.current, []);
 
-    // 逐根综合多空概率（以 0.5 为界，上方绿=偏多、下方红=偏空）
-    probSeriesRef.current = chart.addSeries(BaselineSeries, {
-      priceScaleId: "prob",
-      baseValue: { type: "price", price: 0.5 },
-      topLineColor: "rgba(22,163,74,1)", topFillColor1: "rgba(22,163,74,0.28)", topFillColor2: "rgba(22,163,74,0.04)",
-      bottomLineColor: "rgba(220,38,38,1)", bottomFillColor1: "rgba(220,38,38,0.04)", bottomFillColor2: "rgba(220,38,38,0.28)",
+    // 逐根前瞻波动率预测（年化），独立中段价格轴；紫线，越高=未来波动越大
+    volSeriesRef.current = chart.addSeries(LineSeries, {
+      priceScaleId: "vol",
+      color: VOL_LINE,
       lineWidth: 2,
       priceFormat: { type: "custom", formatter: (v: number) => `${(v * 100).toFixed(0)}%`, minMove: 0.01 },
     });
-    chart.priceScale("prob").applyOptions({ scaleMargins: { top: 0.46, bottom: 0.36 } });
+    chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.46, bottom: 0.36 } });
 
     volumeSeriesRef.current = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume", color: "#94a3b8" });
     chart.priceScale("volume").applyOptions({ scaleMargins: { top: 0.66, bottom: 0.24 } });
@@ -426,7 +406,7 @@ function ChartCanvas({
       chartRef.current = null;
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
-      probSeriesRef.current = null;
+      volSeriesRef.current = null;
       markersRef.current = null;
       laneRefs.current = {};
     };
@@ -444,13 +424,13 @@ function ChartCanvas({
   }, [canLoadMoreHistory, loading, onLoadMoreHistory]);
 
   useEffect(() => {
-    if (!probSeriesRef.current) return;
-    const m = new Map(probSeries.map((p) => [p.time, p.value]));
+    if (!volSeriesRef.current) return;
+    const m = new Map(volSeries.map((p) => [p.time, p.value]));
     // 与 clean 对齐（缺失的根跳过，避免时间不在序列中）
-    probSeriesRef.current.setData(
+    volSeriesRef.current.setData(
       clean.filter((c) => m.has(c.time)).map((c) => ({ time: c.time as Time, value: m.get(c.time) as number })),
     );
-  }, [clean, probSeries]);
+  }, [clean, volSeries]);
 
   useEffect(() => {
     if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
