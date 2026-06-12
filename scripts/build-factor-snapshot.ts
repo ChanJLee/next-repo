@@ -12,7 +12,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { prisma } from "../src/lib/db";
 import { resolveCik, getCompanyFacts, pitFact, pitFirst } from "../src/lib/data/edgar";
-import { getDailyCandlesFromStooq } from "../src/lib/data/stooq";
+import { getDailyCandles } from "../src/lib/data/yahoo";
 
 const FORM_LONG = 252, FORM_SKIP = 21, MIN_BARS = 300;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -42,7 +42,7 @@ async function main() {
   const raw: { ticker: string; bm: number | null; mom: number | null }[] = [];
   for (const tk of universe) {
     try {
-      const candles = await getDailyCandlesFromStooq(tk, 99999);
+      const candles = await getDailyCandles(tk, 2000); // ~5.5 年，足够 252 日动量 + 余量（Stooq 已被反爬挡死，改用 Yahoo）
       if (candles.length < MIN_BARS) { raw.push({ ticker: tk, bm: null, mom: null }); continue; }
       const i = candles.length - 1;
       const price = candles[i].close;
@@ -80,6 +80,16 @@ async function main() {
   }));
   scored.sort((a, b) => a.composite - b.composite);
   const N = scored.length;
+
+  // 护栏：数据源若挂了（如价格全拉失败）会得到空/极小截面——绝不能静默提交空快照覆盖好数据。
+  // 这是上次 Stooq 被反爬挡死后 cron 静默写入 0 条目的根因；这里直接非零退出让 CI 失败、不提交。
+  const MIN_VALID = 30; // 参考池 ~52，健康运行应有 ~50；低于此判定数据源异常
+  if (N < MIN_VALID) {
+    console.error(`\n❌ 仅 ${N} 个标的有效（< ${MIN_VALID}），疑似价格/基本面数据源异常，拒绝写入空快照。`);
+    await prisma.$disconnect().catch(() => {});
+    process.exit(1);
+  }
+
   const items = scored.map((s, rank) => ({ ...s, percentile: Math.round((rank / (N - 1)) * 100) }));
 
   const out = {
