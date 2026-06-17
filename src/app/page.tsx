@@ -9,6 +9,7 @@ import { getQuotesCached } from "@/lib/data/cache";
 import { getQuotes, type Quote } from "@/lib/data/yahoo";
 import { TriggerCheckButton } from "./_components/trigger-check-button";
 import nasdaqWatch from "@/lib/data/nasdaq100-watch.json";
+import { AddToWatchButton } from "./_components/add-to-watch-button";
 
 export const dynamic = "force-dynamic";
 // 手动/强制检查走从本页发起的 Server Action（runCheck 会拉行情+逐策略评估），
@@ -383,20 +384,43 @@ export default async function HomePage() {
 // 纳指 100 成分前瞻：临界线上下的纳入候选 / 剔除风险。
 // 数据来自每日收盘后 GitHub Action 重算的 nasdaq100-watch.json（验证见 scripts/test-nasdaq100-*.ts）。
 // 定位：信息参考。闸门A 已证「被纳入≈无超额收益」，故此处不作买卖建议。
+// 下次年度重构生效日 = 12 月「第三个周五后的周一」（历史规律：quad witching 次个交易日）。
+function nextReconstitution(now = new Date()): Date {
+  const effFor = (year: number) => {
+    const dow = new Date(Date.UTC(year, 11, 1)).getUTCDay(); // 12/1 是星期几
+    const firstFri = 1 + ((5 - dow + 7) % 7);
+    return new Date(Date.UTC(year, 11, firstFri + 14 + 3)); // 第三个周五 +3 = 次周一
+  };
+  const y = now.getUTCFullYear();
+  const d = effFor(y);
+  return now.getTime() > d.getTime() ? effFor(y + 1) : d;
+}
+
 function NasdaqWatchCard() {
   const w = nasdaqWatch as {
     asOf: string;
+    generatedAt: string;
     cutoffCapB: number;
     nextReconstitution: string;
-    addCandidates: { ticker: string; capB: number; beatsMembers: number }[];
-    dropRisk: { ticker: string; capB: number }[];
+    addCandidates: { ticker: string; capB: number; beatsMembers: number; name?: string; sector?: string }[];
+    dropRisk: { ticker: string; capB: number; name?: string; sector?: string }[];
   };
+  const reconDate = nextReconstitution();
+  const daysLeft = Math.ceil((reconDate.getTime() - Date.now()) / 86400_000);
+  const updated = new Date(w.generatedAt);
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">纳指成分前瞻</CardTitle>
-          <span className="text-xs text-muted-foreground">截至 {w.asOf} · {w.nextReconstitution}</span>
+          <div className="flex flex-col items-end gap-0.5 text-xs text-muted-foreground">
+            <span>
+              更新于 {updated.toLocaleString("zh-CN", { timeZone: "America/New_York", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}（美东）
+            </span>
+            <span>
+              距下次年度重构 <span className="font-semibold text-foreground">{daysLeft}</span> 天 · {reconDate.toLocaleDateString("zh-CN", { timeZone: "America/New_York", year: "numeric", month: "numeric", day: "numeric" })}
+            </span>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -412,12 +436,9 @@ function NasdaqWatchCard() {
               <span className="text-muted-foreground">非成分股，市值已越过临界线</span>
             </div>
             {w.addCandidates.length > 0 ? (
-              <ul className="space-y-1">
+              <ul className="divide-y">
                 {w.addCandidates.map((c) => (
-                  <li key={c.ticker} className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="font-medium">{c.ticker}</span>
-                    <span className="text-muted-foreground text-xs">${c.capB}B · 反超 {c.beatsMembers} 只成分</span>
-                  </li>
+                  <WatchRow key={c.ticker} ticker={c.ticker} name={c.name} sector={c.sector} capB={c.capB} extra={`反超 ${c.beatsMembers}`} />
                 ))}
               </ul>
             ) : (
@@ -430,12 +451,9 @@ function NasdaqWatchCard() {
               <span className="rounded bg-red-100 text-red-700 px-2 py-0.5">剔除风险区</span>
               <span className="text-muted-foreground">市值垫底的成分股</span>
             </div>
-            <ul className="space-y-1">
+            <ul className="divide-y">
               {w.dropRisk.map((d) => (
-                <li key={d.ticker} className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="font-medium">{d.ticker}</span>
-                  <span className="text-muted-foreground text-xs">${d.capB}B</span>
-                </li>
+                <WatchRow key={d.ticker} ticker={d.ticker} name={d.name} sector={d.sector} capB={d.capB} />
               ))}
             </ul>
           </div>
@@ -445,6 +463,26 @@ function NasdaqWatchCard() {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+// 纳指看板的单行：代码 + 一键加监控 + 公司名/行业简介 + 市值。
+function WatchRow({ ticker, name, sector, capB, extra }: { ticker: string; name?: string; sector?: string; capB: number; extra?: string }) {
+  const brief = [name, sector].filter(Boolean).join(" · ");
+  return (
+    <li className="flex items-start justify-between gap-2 py-1.5">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1">
+          <span className="font-medium text-sm">{ticker}</span>
+          <AddToWatchButton ticker={ticker} name={name} />
+        </div>
+        {brief ? <div className="truncate text-[11px] text-muted-foreground">{brief}</div> : null}
+      </div>
+      <div className="shrink-0 text-right text-xs text-muted-foreground">
+        <div>${capB}B</div>
+        {extra ? <div className="text-[11px]">{extra}</div> : null}
+      </div>
+    </li>
   );
 }
 
