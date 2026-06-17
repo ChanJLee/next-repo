@@ -41,16 +41,33 @@ const CANDIDATES = [
 const BOTTOM_N = 12; // 临界线：最小的 N 个成分股；垫底成分=剔除风险区
 
 interface Row { ticker: string; cap: number; member: boolean }
+interface QuoteInfo { cap: number; name?: string }
 
-async function fetchCaps(tickers: string[]): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
+async function fetchQuotes(tickers: string[]): Promise<Map<string, QuoteInfo>> {
+  const out = new Map<string, QuoteInfo>();
   // 分批查，避免单次过大
   for (let i = 0; i < tickers.length; i += 40) {
     const batch = tickers.slice(i, i + 40);
     const raw = await yf.quote(batch, {}, { validateResult: false });
     for (const q of (Array.isArray(raw) ? raw : [raw])) {
-      if (q && typeof q.marketCap === "number" && q.marketCap > 0) out.set((q.symbol as string).toUpperCase(), q.marketCap);
+      if (q && typeof q.marketCap === "number" && q.marketCap > 0) {
+        out.set((q.symbol as string).toUpperCase(), { cap: q.marketCap, name: (q.longName ?? q.shortName ?? q.displayName) as string | undefined });
+      }
     }
+  }
+  return out;
+}
+
+// 仅对展示的少量 ticker 取行业（assetProfile）；公司名已在报价里拿到。
+async function fetchSectors(tickers: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  for (const tk of tickers) {
+    try {
+      const r = await yf.quoteSummary(tk, { modules: ["assetProfile"] }, { validateResult: false }) as { assetProfile?: { sector?: string } };
+      const s = r?.assetProfile?.sector;
+      if (s) out.set(tk, s);
+    } catch { /* 取不到行业就略过 */ }
+    await new Promise((res) => setTimeout(res, 120));
   }
   return out;
 }
@@ -59,13 +76,13 @@ async function main() {
   const universe = [...new Set([...MEMBERS, ...CANDIDATES])];
   const memberSet = new Set(MEMBERS.map((t) => t.toUpperCase()));
   console.log(`查市值：成分 ${MEMBERS.length} + 候选 ${CANDIDATES.length}（去重 ${universe.length}）`);
-  const caps = await fetchCaps(universe);
+  const quotes = await fetchQuotes(universe);
 
   const rows: Row[] = universe
-    .filter((t) => caps.has(t.toUpperCase()))
-    .map((t) => ({ ticker: t.toUpperCase(), cap: caps.get(t.toUpperCase())!, member: memberSet.has(t.toUpperCase()) }));
+    .filter((t) => quotes.has(t.toUpperCase()))
+    .map((t) => ({ ticker: t.toUpperCase(), cap: quotes.get(t.toUpperCase())!.cap, member: memberSet.has(t.toUpperCase()) }));
 
-  const missingMembers = MEMBERS.filter((t) => !caps.has(t.toUpperCase()));
+  const missingMembers = MEMBERS.filter((t) => !quotes.has(t.toUpperCase()));
   if (missingMembers.length) console.log(`⚠ 缺市值的成分股（跳过）：${missingMembers.join(", ")}`);
 
   const members = rows.filter((r) => r.member).sort((a, b) => a.cap - b.cap); // 升序：最小在前
@@ -75,17 +92,23 @@ async function main() {
   const bottomMembers = members.slice(0, BOTTOM_N);
   const cutoffCap = bottomMembers[bottomMembers.length - 1].cap;
 
-  // 剔除风险区：垫底成分（按市值升序）；并标注是否已被某非成分股反超
-  const dropRisk = bottomMembers.map((r) => ({ ticker: r.ticker, capB: +(r.cap / 1e9).toFixed(1) }));
+  // 候选/风险的 ticker（只对这些少量标的取行业）
+  const dropTickers = bottomMembers.map((r) => r.ticker);
+  const addRows = rows.filter((r) => !r.member && r.cap >= cutoffCap).sort((a, b) => b.cap - a.cap);
+  const sectors = await fetchSectors([...addRows.map((r) => r.ticker), ...dropTickers]);
+  const nameOf = (t: string) => quotes.get(t)?.name;
 
-  // 纳入候选区：非成分股中市值 ≥ 临界线者（按市值降序）
-  const addCandidates = rows
-    .filter((r) => !r.member && r.cap >= cutoffCap)
-    .sort((a, b) => b.cap - a.cap)
-    .map((r) => {
-      const beats = members.filter((m) => m.cap < r.cap).length; // 反超了几个成分股
-      return { ticker: r.ticker, capB: +(r.cap / 1e9).toFixed(1), beatsMembers: beats };
-    });
+  // 剔除风险区：垫底成分（按市值升序）；附公司名+行业
+  const dropRisk = bottomMembers.map((r) => ({ ticker: r.ticker, capB: +(r.cap / 1e9).toFixed(1), name: nameOf(r.ticker), sector: sectors.get(r.ticker) }));
+
+  // 纳入候选区：非成分股中市值 ≥ 临界线者（按市值降序）；附反超数、公司名+行业
+  const addCandidates = addRows.map((r) => ({
+    ticker: r.ticker,
+    capB: +(r.cap / 1e9).toFixed(1),
+    beatsMembers: members.filter((m) => m.cap < r.cap).length, // 反超了几个成分股
+    name: nameOf(r.ticker),
+    sector: sectors.get(r.ticker),
+  }));
 
   const snapshot = {
     asOf: new Date().toISOString().slice(0, 10),

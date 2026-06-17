@@ -9,6 +9,7 @@ import { getQuotesCached } from "@/lib/data/cache";
 import { getQuotes, type Quote } from "@/lib/data/yahoo";
 import { TriggerCheckButton } from "./_components/trigger-check-button";
 import nasdaqWatch from "@/lib/data/nasdaq100-watch.json";
+import { AddToWatchButton } from "./_components/add-to-watch-button";
 
 export const dynamic = "force-dynamic";
 // 手动/强制检查走从本页发起的 Server Action（runCheck 会拉行情+逐策略评估），
@@ -401,8 +402,8 @@ function NasdaqWatchCard() {
     generatedAt: string;
     cutoffCapB: number;
     nextReconstitution: string;
-    addCandidates: { ticker: string; capB: number; beatsMembers: number }[];
-    dropRisk: { ticker: string; capB: number }[];
+    addCandidates: { ticker: string; capB: number; beatsMembers: number; name?: string; sector?: string }[];
+    dropRisk: { ticker: string; capB: number; name?: string; sector?: string }[];
   };
   const reconDate = nextReconstitution();
   const daysLeft = Math.ceil((reconDate.getTime() - Date.now()) / 86400_000);
@@ -435,12 +436,9 @@ function NasdaqWatchCard() {
               <span className="text-muted-foreground">非成分股，市值已越过临界线</span>
             </div>
             {w.addCandidates.length > 0 ? (
-              <ul className="space-y-1">
+              <ul className="divide-y">
                 {w.addCandidates.map((c) => (
-                  <li key={c.ticker} className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="font-medium">{c.ticker}</span>
-                    <span className="text-muted-foreground text-xs">${c.capB}B · 反超 {c.beatsMembers} 只成分</span>
-                  </li>
+                  <WatchRow key={c.ticker} ticker={c.ticker} name={c.name} sector={c.sector} capB={c.capB} extra={`反超 ${c.beatsMembers}`} />
                 ))}
               </ul>
             ) : (
@@ -453,12 +451,9 @@ function NasdaqWatchCard() {
               <span className="rounded bg-red-100 text-red-700 px-2 py-0.5">剔除风险区</span>
               <span className="text-muted-foreground">市值垫底的成分股</span>
             </div>
-            <ul className="space-y-1">
+            <ul className="divide-y">
               {w.dropRisk.map((d) => (
-                <li key={d.ticker} className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="font-medium">{d.ticker}</span>
-                  <span className="text-muted-foreground text-xs">${d.capB}B</span>
-                </li>
+                <WatchRow key={d.ticker} ticker={d.ticker} name={d.name} sector={d.sector} capB={d.capB} />
               ))}
             </ul>
           </div>
@@ -468,6 +463,26 @@ function NasdaqWatchCard() {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+// 纳指看板的单行：代码 + 一键加监控 + 公司名/行业简介 + 市值。
+function WatchRow({ ticker, name, sector, capB, extra }: { ticker: string; name?: string; sector?: string; capB: number; extra?: string }) {
+  const brief = [name, sector].filter(Boolean).join(" · ");
+  return (
+    <li className="flex items-start justify-between gap-2 py-1.5">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1">
+          <span className="font-medium text-sm">{ticker}</span>
+          <AddToWatchButton ticker={ticker} name={name} />
+        </div>
+        {brief ? <div className="truncate text-[11px] text-muted-foreground">{brief}</div> : null}
+      </div>
+      <div className="shrink-0 text-right text-xs text-muted-foreground">
+        <div>${capB}B</div>
+        {extra ? <div className="text-[11px]">{extra}</div> : null}
+      </div>
+    </li>
   );
 }
 
