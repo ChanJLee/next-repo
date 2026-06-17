@@ -383,20 +383,43 @@ export default async function HomePage() {
 // 纳指 100 成分前瞻：临界线上下的纳入候选 / 剔除风险。
 // 数据来自每日收盘后 GitHub Action 重算的 nasdaq100-watch.json（验证见 scripts/test-nasdaq100-*.ts）。
 // 定位：信息参考。闸门A 已证「被纳入≈无超额收益」，故此处不作买卖建议。
+// 下次年度重构生效日 = 12 月「第三个周五后的周一」（历史规律：quad witching 次个交易日）。
+function nextReconstitution(now = new Date()): Date {
+  const effFor = (year: number) => {
+    const dow = new Date(Date.UTC(year, 11, 1)).getUTCDay(); // 12/1 是星期几
+    const firstFri = 1 + ((5 - dow + 7) % 7);
+    return new Date(Date.UTC(year, 11, firstFri + 14 + 3)); // 第三个周五 +3 = 次周一
+  };
+  const y = now.getUTCFullYear();
+  const d = effFor(y);
+  return now.getTime() > d.getTime() ? effFor(y + 1) : d;
+}
+
 function NasdaqWatchCard() {
   const w = nasdaqWatch as {
     asOf: string;
+    generatedAt: string;
     cutoffCapB: number;
     nextReconstitution: string;
     addCandidates: { ticker: string; capB: number; beatsMembers: number }[];
     dropRisk: { ticker: string; capB: number }[];
   };
+  const reconDate = nextReconstitution();
+  const daysLeft = Math.ceil((reconDate.getTime() - Date.now()) / 86400_000);
+  const updated = new Date(w.generatedAt);
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">纳指成分前瞻</CardTitle>
-          <span className="text-xs text-muted-foreground">截至 {w.asOf} · {w.nextReconstitution}</span>
+          <div className="flex flex-col items-end gap-0.5 text-xs text-muted-foreground">
+            <span>
+              更新于 {updated.toLocaleString("zh-CN", { timeZone: "America/New_York", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}（美东）
+            </span>
+            <span>
+              距下次年度重构 <span className="font-semibold text-foreground">{daysLeft}</span> 天 · {reconDate.toLocaleDateString("zh-CN", { timeZone: "America/New_York", year: "numeric", month: "numeric", day: "numeric" })}
+            </span>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
