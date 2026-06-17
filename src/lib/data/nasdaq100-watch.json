@@ -1,0 +1,95 @@
+{
+  "asOf": "2026-06-17",
+  "generatedAt": "2026-06-17T02:22:15.500Z",
+  "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
+  "cutoffCapB": 35.1,
+  "memberCount": 101,
+  "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
+  "addCandidates": [
+    {
+      "ticker": "NTES",
+      "capB": 78,
+      "beatsMembers": 43
+    },
+    {
+      "ticker": "ALAB",
+      "capB": 62,
+      "beatsMembers": 31
+    },
+    {
+      "ticker": "ARGX",
+      "capB": 54.9,
+      "beatsMembers": 30
+    },
+    {
+      "ticker": "ON",
+      "capB": 46,
+      "beatsMembers": 22
+    },
+    {
+      "ticker": "GFS",
+      "capB": 43.9,
+      "beatsMembers": 20
+    },
+    {
+      "ticker": "BIDU",
+      "capB": 38.4,
+      "beatsMembers": 15
+    },
+    {
+      "ticker": "JD",
+      "capB": 38.3,
+      "beatsMembers": 15
+    }
+  ],
+  "dropRisk": [
+    {
+      "ticker": "ZS",
+      "capB": 20.6
+    },
+    {
+      "ticker": "INSM",
+      "capB": 20.7
+    },
+    {
+      "ticker": "CHTR",
+      "capB": 22.2
+    },
+    {
+      "ticker": "VRSK",
+      "capB": 23.5
+    },
+    {
+      "ticker": "CTSH",
+      "capB": 24.1
+    },
+    {
+      "ticker": "KHC",
+      "capB": 28.2
+    },
+    {
+      "ticker": "DXCM",
+      "capB": 28.2
+    },
+    {
+      "ticker": "CPRT",
+      "capB": 28.5
+    },
+    {
+      "ticker": "GEHC",
+      "capB": 28.8
+    },
+    {
+      "ticker": "WDAY",
+      "capB": 31.3
+    },
+    {
+      "ticker": "ROP",
+      "capB": 34
+    },
+    {
+      "ticker": "AXON",
+      "capB": 35.1
+    }
+  ]
+}
