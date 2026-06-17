@@ -1,0 +1,52 @@
+name: Refresh Nasdaq-100 Watch
+
+# 每个交易日收盘后重算「纳指成分前瞻」快照并提交回仓。
+# 美股收盘：夏令时 20:00 UTC / 冬令时 21:00 UTC → 统一 22:00 UTC 跑（两季都已收盘）。
+# 仅用 Yahoo 行情（marketCap）；数据源异常时脚本非零退出（护栏），不提交坏快照（保留上次好数据）。
+on:
+  schedule:
+    - cron: "0 22 * * 1-5" # 周一至周五 22:00 UTC，美股收盘后
+  workflow_dispatch:
+
+concurrency:
+  group: nasdaq100-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: write # 允许把刷新后的快照 commit 回 main
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild watch snapshot
+        run: pnpm nasdaq:watch
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- src/lib/data/nasdaq100-watch.json; then
+            echo "快照无变化，跳过提交"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/data/nasdaq100-watch.json
+          git commit -m "chore(nasdaq): daily nasdaq-100 watch snapshot refresh
+
+          Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+          git push

@@ -8,6 +8,7 @@ import { isMarketOpen } from "@/lib/market/hours";
 import { getQuotesCached } from "@/lib/data/cache";
 import { getQuotes, type Quote } from "@/lib/data/yahoo";
 import { TriggerCheckButton } from "./_components/trigger-check-button";
+import nasdaqWatch from "@/lib/data/nasdaq100-watch.json";
 
 export const dynamic = "force-dynamic";
 // 手动/强制检查走从本页发起的 Server Action（runCheck 会拉行情+逐策略评估），
@@ -235,6 +236,9 @@ export default async function HomePage() {
         </Card>
       ) : null}
 
+      {/* 纳指成分前瞻 */}
+      <NasdaqWatchCard />
+
       {/* 今日简报 */}
       <Card>
         <CardHeader className="pb-3">
@@ -373,6 +377,74 @@ export default async function HomePage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// 纳指 100 成分前瞻：临界线上下的纳入候选 / 剔除风险。
+// 数据来自每日收盘后 GitHub Action 重算的 nasdaq100-watch.json（验证见 scripts/test-nasdaq100-*.ts）。
+// 定位：信息参考。闸门A 已证「被纳入≈无超额收益」，故此处不作买卖建议。
+function NasdaqWatchCard() {
+  const w = nasdaqWatch as {
+    asOf: string;
+    cutoffCapB: number;
+    nextReconstitution: string;
+    addCandidates: { ticker: string; capB: number; beatsMembers: number }[];
+    dropRisk: { ticker: string; capB: number }[];
+  };
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="text-base">纳指成分前瞻</CardTitle>
+          <span className="text-xs text-muted-foreground">截至 {w.asOf} · {w.nextReconstitution}</span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          按市值排名估算的临界线 ≈ <span className="font-medium">${w.cutoffCapB}B</span>。
+          <span className="ml-1">信息参考，非买卖信号——历史上「被纳入」本身≈无超额收益（指数效应已被抢跑）。</span>
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* 纳入候选区 */}
+          <div className="rounded-md border p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs">
+              <span className="rounded bg-green-100 text-green-700 px-2 py-0.5">纳入候选区</span>
+              <span className="text-muted-foreground">非成分股，市值已越过临界线</span>
+            </div>
+            {w.addCandidates.length > 0 ? (
+              <ul className="space-y-1">
+                {w.addCandidates.map((c) => (
+                  <li key={c.ticker} className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="font-medium">{c.ticker}</span>
+                    <span className="text-muted-foreground text-xs">${c.capB}B · 反超 {c.beatsMembers} 只成分</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">暂无明显候选。</p>
+            )}
+          </div>
+          {/* 剔除风险区 */}
+          <div className="rounded-md border p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs">
+              <span className="rounded bg-red-100 text-red-700 px-2 py-0.5">剔除风险区</span>
+              <span className="text-muted-foreground">市值垫底的成分股</span>
+            </div>
+            <ul className="space-y-1">
+              {w.dropRisk.map((d) => (
+                <li key={d.ticker} className="flex items-baseline justify-between gap-2 text-sm">
+                  <span className="font-medium">{d.ticker}</span>
+                  <span className="text-muted-foreground text-xs">${d.capB}B</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          年度重构每年 12 月按 11 月底市值定选；剔除亦可能因最小权重/流通/资格触发，市值仅为主因。
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
