@@ -1,56 +1,56 @@
 {
   "asOf": "2026-06-17",
-  "generatedAt": "2026-06-17T02:47:45.830Z",
+  "generatedAt": "2026-06-17T23:44:56.591Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 35.1,
+  "cutoffCapB": 34.1,
   "memberCount": 101,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 78,
+      "capB": 77.5,
       "beatsMembers": 43,
       "name": "NetEase, Inc.",
       "sector": "Communication Services"
     },
     {
       "ticker": "ALAB",
-      "capB": 62,
-      "beatsMembers": 31,
+      "capB": 64.2,
+      "beatsMembers": 33,
       "name": "Astera Labs, Inc.",
       "sector": "Technology"
     },
     {
       "ticker": "ARGX",
-      "capB": 54.9,
+      "capB": 55.8,
       "beatsMembers": 30,
       "name": "argenx SE",
       "sector": "Healthcare"
     },
     {
+      "ticker": "GFS",
+      "capB": 44.2,
+      "beatsMembers": 22,
+      "name": "GLOBALFOUNDRIES Inc.",
+      "sector": "Technology"
+    },
+    {
       "ticker": "ON",
-      "capB": 46,
+      "capB": 43.9,
       "beatsMembers": 22,
       "name": "ON Semiconductor Corporation",
       "sector": "Technology"
     },
     {
-      "ticker": "GFS",
-      "capB": 43.9,
-      "beatsMembers": 20,
-      "name": "GLOBALFOUNDRIES Inc.",
-      "sector": "Technology"
-    },
-    {
       "ticker": "BIDU",
-      "capB": 38.4,
-      "beatsMembers": 15,
+      "capB": 38,
+      "beatsMembers": 16,
       "name": "Baidu, Inc.",
       "sector": "Communication Services"
     },
     {
       "ticker": "JD",
-      "capB": 38.3,
+      "capB": 37.7,
       "beatsMembers": 15,
       "name": "JD.com, Inc.",
       "sector": "Consumer Cyclical"
@@ -59,73 +59,73 @@
   "dropRisk": [
     {
       "ticker": "ZS",
-      "capB": 20.6,
+      "capB": 20.1,
       "name": "Zscaler, Inc.",
       "sector": "Technology"
     },
     {
-      "ticker": "INSM",
-      "capB": 20.7,
-      "name": "Insmed Incorporated",
-      "sector": "Healthcare"
-    },
-    {
       "ticker": "CHTR",
-      "capB": 22.2,
+      "capB": 20.7,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services"
     },
     {
+      "ticker": "INSM",
+      "capB": 21.3,
+      "name": "Insmed Incorporated",
+      "sector": "Healthcare"
+    },
+    {
       "ticker": "VRSK",
-      "capB": 23.5,
+      "capB": 23,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials"
     },
     {
       "ticker": "CTSH",
-      "capB": 24.1,
+      "capB": 23.1,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology"
     },
     {
-      "ticker": "KHC",
-      "capB": 28.2,
-      "name": "The Kraft Heinz Company",
-      "sector": "Consumer Defensive"
-    },
-    {
-      "ticker": "DXCM",
-      "capB": 28.2,
-      "name": "DexCom, Inc.",
-      "sector": "Healthcare"
-    },
-    {
-      "ticker": "GEHC",
-      "capB": 28.8,
-      "name": "GE HealthCare Technologies Inc.",
-      "sector": "Healthcare"
-    },
-    {
       "ticker": "CPRT",
-      "capB": 29.6,
+      "capB": 27.3,
       "name": "Copart, Inc.",
       "sector": "Industrials"
     },
     {
+      "ticker": "DXCM",
+      "capB": 27.5,
+      "name": "DexCom, Inc.",
+      "sector": "Healthcare"
+    },
+    {
+      "ticker": "KHC",
+      "capB": 27.5,
+      "name": "The Kraft Heinz Company",
+      "sector": "Consumer Defensive"
+    },
+    {
+      "ticker": "GEHC",
+      "capB": 27.8,
+      "name": "GE HealthCare Technologies Inc.",
+      "sector": "Healthcare"
+    },
+    {
       "ticker": "WDAY",
-      "capB": 31.3,
+      "capB": 30.1,
       "name": "Workday, Inc.",
       "sector": "Technology"
     },
     {
       "ticker": "ROP",
-      "capB": 34,
+      "capB": 33.3,
       "name": "Roper Technologies, Inc.",
       "sector": "Technology"
     },
     {
       "ticker": "AXON",
-      "capB": 35.1,
+      "capB": 34.1,
       "name": "Axon Enterprise, Inc.",
       "sector": "Industrials"
     }
