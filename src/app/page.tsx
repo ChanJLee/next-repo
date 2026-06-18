@@ -402,8 +402,8 @@ function NasdaqWatchCard() {
     generatedAt: string;
     cutoffCapB: number;
     nextReconstitution: string;
-    addCandidates: { ticker: string; capB: number; beatsMembers: number; name?: string; sector?: string }[];
-    dropRisk: { ticker: string; capB: number; name?: string; sector?: string }[];
+    addCandidates: { ticker: string; capB: number; beatsMembers: number; name?: string; sector?: string; since?: string }[];
+    dropRisk: { ticker: string; capB: number; name?: string; sector?: string; since?: string }[];
   };
   const reconDate = nextReconstitution();
   const daysLeft = Math.ceil((reconDate.getTime() - Date.now()) / 86400_000);
@@ -438,7 +438,7 @@ function NasdaqWatchCard() {
             {w.addCandidates.length > 0 ? (
               <ul className="divide-y">
                 {w.addCandidates.map((c) => (
-                  <WatchRow key={c.ticker} ticker={c.ticker} name={c.name} sector={c.sector} capB={c.capB} extra={`反超 ${c.beatsMembers}`} />
+                  <WatchRow key={c.ticker} ticker={c.ticker} name={c.name} sector={c.sector} capB={c.capB} extra={`反超 ${c.beatsMembers}`} since={c.since} asOf={w.asOf} />
                 ))}
               </ul>
             ) : (
@@ -453,7 +453,7 @@ function NasdaqWatchCard() {
             </div>
             <ul className="divide-y">
               {w.dropRisk.map((d) => (
-                <WatchRow key={d.ticker} ticker={d.ticker} name={d.name} sector={d.sector} capB={d.capB} />
+                <WatchRow key={d.ticker} ticker={d.ticker} name={d.name} sector={d.sector} capB={d.capB} since={d.since} asOf={w.asOf} />
               ))}
             </ul>
           </div>
@@ -466,17 +466,30 @@ function NasdaqWatchCard() {
   );
 }
 
-// 纳指看板的单行：代码 + 一键加监控 + 公司名/行业简介 + 市值。
-function WatchRow({ ticker, name, sector, capB, extra }: { ticker: string; name?: string; sector?: string; capB: number; extra?: string }) {
+// 连续上榜天数（含首日）：以快照 asOf 为基准，距 since 的自然日数 +1。
+function daysOnList(since: string, asOf: string): number {
+  const ms = Date.parse(`${asOf}T00:00:00Z`) - Date.parse(`${since}T00:00:00Z`);
+  if (!Number.isFinite(ms)) return 1;
+  return Math.max(1, Math.round(ms / 86400_000) + 1);
+}
+
+// 纳指看板的单行：代码 + 一键加监控 + 公司名/行业简介 + 上榜时长 + 市值。
+function WatchRow({ ticker, name, sector, capB, extra, since, asOf }: { ticker: string; name?: string; sector?: string; capB: number; extra?: string; since?: string; asOf: string }) {
   const brief = [name, sector].filter(Boolean).join(" · ");
+  const days = since ? daysOnList(since, asOf) : null;
+  const isNew = since != null && since === asOf; // 今天才上榜 → 新增
   return (
     <li className="flex items-start justify-between gap-2 py-1.5">
       <div className="min-w-0">
         <div className="flex items-center gap-1">
           <span className="font-medium text-sm">{ticker}</span>
           <AddToWatchButton ticker={ticker} name={name} />
+          {isNew ? <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-medium">新增</span> : null}
         </div>
         {brief ? <div className="truncate text-[11px] text-muted-foreground">{brief}</div> : null}
+        {days != null ? (
+          <div className="text-[11px] text-muted-foreground">连续上榜 {days} 天</div>
+        ) : null}
       </div>
       <div className="shrink-0 text-right text-xs text-muted-foreground">
         <div>${capB}B</div>
