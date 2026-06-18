@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Settings } from "lucide-react";
 import { StooqApikeyBanner } from "@/components/stooq-apikey-banner";
 import { LogoutButton } from "@/components/logout-button";
 
@@ -8,13 +9,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <header className="border-b">
         <div className="container flex h-14 items-center gap-6">
-          <span className="font-semibold">📈 Stock Monitor</span>
-          <nav className="flex flex-1 gap-4 text-sm text-muted-foreground">
-            <Link href="/" className="hover:text-foreground">总览</Link>
-            <Link href="/watchlist" className="hover:text-foreground">监控列表</Link>
-            <Link href="/settings" className="hover:text-foreground">设置</Link>
-          </nav>
-          <LogoutButton />
+          <Link href="/" className="font-semibold hover:opacity-80">📈 Stock Monitor</Link>
+          <div className="flex flex-1 items-center justify-end gap-4">
+            <Link
+              href="/settings"
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              title="设置"
+            >
+              <Settings className="h-4 w-4" />
+              <span>设置</span>
+            </Link>
+            <LogoutButton />
+          </div>
         </div>
       </header>
       <main className="container py-6 space-y-4">
