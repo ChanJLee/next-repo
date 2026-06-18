@@ -1,6 +1,6 @@
 {
   "asOf": "2026-06-18",
-  "generatedAt": "2026-06-18T03:43:01.925Z",
+  "generatedAt": "2026-06-18T23:52:43.609Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
   "cutoffCapB": 34.1,
   "memberCount": 101,
@@ -8,41 +8,41 @@
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 77.5,
-      "beatsMembers": 43,
+      "capB": 77.7,
+      "beatsMembers": 44,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "ALAB",
-      "capB": 64.2,
-      "beatsMembers": 33,
+      "capB": 71.5,
+      "beatsMembers": 37,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "ARGX",
-      "capB": 55.8,
+      "capB": 54.9,
       "beatsMembers": 30,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
-      "ticker": "GFS",
-      "capB": 44.2,
-      "beatsMembers": 22,
-      "name": "GLOBALFOUNDRIES Inc.",
+      "ticker": "ON",
+      "capB": 47.3,
+      "beatsMembers": 24,
+      "name": "ON Semiconductor Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
-      "ticker": "ON",
-      "capB": 43.9,
-      "beatsMembers": 22,
-      "name": "ON Semiconductor Corporation",
+      "ticker": "GFS",
+      "capB": 47.1,
+      "beatsMembers": 24,
+      "name": "GLOBALFOUNDRIES Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
@@ -56,7 +56,7 @@
     },
     {
       "ticker": "JD",
-      "capB": 37.7,
+      "capB": 37.2,
       "beatsMembers": 15,
       "name": "JD.com, Inc.",
       "sector": "Consumer Cyclical",
@@ -65,71 +65,71 @@
   ],
   "dropRisk": [
     {
-      "ticker": "ZS",
-      "capB": 20.1,
-      "name": "Zscaler, Inc.",
-      "sector": "Technology",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "CHTR",
-      "capB": 20.7,
+      "capB": 19.8,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
+      "ticker": "ZS",
+      "capB": 20.2,
+      "name": "Zscaler, Inc.",
+      "sector": "Technology",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "CTSH",
+      "capB": 20.7,
+      "name": "Cognizant Technology Solutions Corporation",
+      "sector": "Technology",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "INSM",
-      "capB": 21.3,
+      "capB": 20.8,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 23,
+      "capB": 22.8,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
-      "ticker": "CTSH",
-      "capB": 23.1,
-      "name": "Cognizant Technology Solutions Corporation",
-      "sector": "Technology",
-      "since": "2026-06-17"
-    },
-    {
-      "ticker": "CPRT",
-      "capB": 27.3,
-      "name": "Copart, Inc.",
-      "sector": "Industrials",
-      "since": "2026-06-17"
-    },
-    {
-      "ticker": "DXCM",
-      "capB": 27.5,
-      "name": "DexCom, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "KHC",
-      "capB": 27.5,
+      "capB": 27.1,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
     },
     {
+      "ticker": "DXCM",
+      "capB": 28,
+      "name": "DexCom, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "CPRT",
+      "capB": 28,
+      "name": "Copart, Inc.",
+      "sector": "Industrials",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "GEHC",
-      "capB": 27.8,
+      "capB": 28,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "WDAY",
-      "capB": 30.1,
+      "capB": 28.9,
       "name": "Workday, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
