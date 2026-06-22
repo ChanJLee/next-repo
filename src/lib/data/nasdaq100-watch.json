@@ -1,133 +1,152 @@
 {
-  "asOf": "2026-06-17",
-  "generatedAt": "2026-06-17T02:47:45.830Z",
+  "asOf": "2026-06-18",
+  "generatedAt": "2026-06-18T03:43:01.925Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 35.1,
+  "cutoffCapB": 34.1,
   "memberCount": 101,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 78,
+      "capB": 77.5,
       "beatsMembers": 43,
       "name": "NetEase, Inc.",
-      "sector": "Communication Services"
+      "sector": "Communication Services",
+      "since": "2026-06-17"
     },
     {
       "ticker": "ALAB",
-      "capB": 62,
-      "beatsMembers": 31,
+      "capB": 64.2,
+      "beatsMembers": 33,
       "name": "Astera Labs, Inc.",
-      "sector": "Technology"
+      "sector": "Technology",
+      "since": "2026-06-17"
     },
     {
       "ticker": "ARGX",
-      "capB": 54.9,
+      "capB": 55.8,
       "beatsMembers": 30,
       "name": "argenx SE",
-      "sector": "Healthcare"
-    },
-    {
-      "ticker": "ON",
-      "capB": 46,
-      "beatsMembers": 22,
-      "name": "ON Semiconductor Corporation",
-      "sector": "Technology"
+      "sector": "Healthcare",
+      "since": "2026-06-17"
     },
     {
       "ticker": "GFS",
-      "capB": 43.9,
-      "beatsMembers": 20,
+      "capB": 44.2,
+      "beatsMembers": 22,
       "name": "GLOBALFOUNDRIES Inc.",
-      "sector": "Technology"
+      "sector": "Technology",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "ON",
+      "capB": 43.9,
+      "beatsMembers": 22,
+      "name": "ON Semiconductor Corporation",
+      "sector": "Technology",
+      "since": "2026-06-17"
     },
     {
       "ticker": "BIDU",
-      "capB": 38.4,
-      "beatsMembers": 15,
+      "capB": 38,
+      "beatsMembers": 16,
       "name": "Baidu, Inc.",
-      "sector": "Communication Services"
+      "sector": "Communication Services",
+      "since": "2026-06-17"
     },
     {
       "ticker": "JD",
-      "capB": 38.3,
+      "capB": 37.7,
       "beatsMembers": 15,
       "name": "JD.com, Inc.",
-      "sector": "Consumer Cyclical"
+      "sector": "Consumer Cyclical",
+      "since": "2026-06-17"
     }
   ],
   "dropRisk": [
     {
       "ticker": "ZS",
-      "capB": 20.6,
+      "capB": 20.1,
       "name": "Zscaler, Inc.",
-      "sector": "Technology"
-    },
-    {
-      "ticker": "INSM",
-      "capB": 20.7,
-      "name": "Insmed Incorporated",
-      "sector": "Healthcare"
+      "sector": "Technology",
+      "since": "2026-06-17"
     },
     {
       "ticker": "CHTR",
-      "capB": 22.2,
+      "capB": 20.7,
       "name": "Charter Communications, Inc.",
-      "sector": "Communication Services"
+      "sector": "Communication Services",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "INSM",
+      "capB": 21.3,
+      "name": "Insmed Incorporated",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 23.5,
+      "capB": 23,
       "name": "Verisk Analytics, Inc.",
-      "sector": "Industrials"
+      "sector": "Industrials",
+      "since": "2026-06-17"
     },
     {
       "ticker": "CTSH",
-      "capB": 24.1,
+      "capB": 23.1,
       "name": "Cognizant Technology Solutions Corporation",
-      "sector": "Technology"
-    },
-    {
-      "ticker": "KHC",
-      "capB": 28.2,
-      "name": "The Kraft Heinz Company",
-      "sector": "Consumer Defensive"
-    },
-    {
-      "ticker": "DXCM",
-      "capB": 28.2,
-      "name": "DexCom, Inc.",
-      "sector": "Healthcare"
-    },
-    {
-      "ticker": "GEHC",
-      "capB": 28.8,
-      "name": "GE HealthCare Technologies Inc.",
-      "sector": "Healthcare"
+      "sector": "Technology",
+      "since": "2026-06-17"
     },
     {
       "ticker": "CPRT",
-      "capB": 29.6,
+      "capB": 27.3,
       "name": "Copart, Inc.",
-      "sector": "Industrials"
+      "sector": "Industrials",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "DXCM",
+      "capB": 27.5,
+      "name": "DexCom, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "KHC",
+      "capB": 27.5,
+      "name": "The Kraft Heinz Company",
+      "sector": "Consumer Defensive",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "GEHC",
+      "capB": 27.8,
+      "name": "GE HealthCare Technologies Inc.",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
     },
     {
       "ticker": "WDAY",
-      "capB": 31.3,
+      "capB": 30.1,
       "name": "Workday, Inc.",
-      "sector": "Technology"
+      "sector": "Technology",
+      "since": "2026-06-17"
     },
     {
       "ticker": "ROP",
-      "capB": 34,
+      "capB": 33.3,
       "name": "Roper Technologies, Inc.",
-      "sector": "Technology"
+      "sector": "Technology",
+      "since": "2026-06-17"
     },
     {
       "ticker": "AXON",
-      "capB": 35.1,
+      "capB": 34.1,
       "name": "Axon Enterprise, Inc.",
-      "sector": "Industrials"
+      "sector": "Industrials",
+      "since": "2026-06-17"
     }
   ]
 }
