@@ -1,0 +1,20 @@
+{
+  "note": "多模型估值快照，信息参考、非买卖建议。输入为人工录入的基本面口径（可后续接自动化）。fcfBaseB 用正常化自由现金流口径。",
+  "companies": [
+    {
+      "ticker": "MSFT",
+      "name": "微软 Microsoft",
+      "asOf": "2026-06-18",
+      "price": 379.4,
+      "marketCapB": 2820,
+      "forwardEps": 19.9,
+      "hist5yForwardPe": 30,
+      "consensusGrowthPct": 13.4,
+      "fcfBaseB": 70,
+      "netCashB": 40,
+      "stage1GrowthPct": 12,
+      "discountRatePct": 9,
+      "terminalGrowthPct": 4
+    }
+  ]
+}

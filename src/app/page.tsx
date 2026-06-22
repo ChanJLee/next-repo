@@ -10,6 +10,7 @@ import { getQuotes, type Quote } from "@/lib/data/yahoo";
 import { TriggerCheckButton } from "./_components/trigger-check-button";
 import nasdaqWatch from "@/lib/data/nasdaq100-watch.json";
 import { AddToWatchButton } from "./_components/add-to-watch-button";
+import { ValuationCard } from "./_components/valuation-card";
 
 export const dynamic = "force-dynamic";
 // 手动/强制检查走从本页发起的 Server Action（runCheck 会拉行情+逐策略评估），
@@ -239,6 +240,9 @@ export default async function HomePage() {
 
       {/* 纳指成分前瞻 */}
       <NasdaqWatchCard />
+
+      {/* 估值快照（多模型） */}
+      <ValuationCard />
 
       {/* 今日简报 */}
       <Card>
