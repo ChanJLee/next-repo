@@ -1,14 +1,14 @@
 {
-  "asOf": "2026-06-19",
-  "generatedAt": "2026-06-19T23:07:11.447Z",
+  "asOf": "2026-06-22",
+  "generatedAt": "2026-06-22T23:26:40.308Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 34.1,
+  "cutoffCapB": 33,
   "memberCount": 101,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 77.7,
+      "capB": 77.9,
       "beatsMembers": 44,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
@@ -16,15 +16,15 @@
     },
     {
       "ticker": "ALAB",
-      "capB": 71.5,
-      "beatsMembers": 37,
+      "capB": 75.4,
+      "beatsMembers": 40,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "ARGX",
-      "capB": 54.9,
+      "capB": 56.5,
       "beatsMembers": 30,
       "name": "argenx SE",
       "sector": "Healthcare",
@@ -32,16 +32,16 @@
     },
     {
       "ticker": "ON",
-      "capB": 47.3,
-      "beatsMembers": 24,
+      "capB": 51.1,
+      "beatsMembers": 27,
       "name": "ON Semiconductor Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "GFS",
-      "capB": 47.1,
-      "beatsMembers": 24,
+      "capB": 49.2,
+      "beatsMembers": 25,
       "name": "GLOBALFOUNDRIES Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
@@ -49,15 +49,15 @@
     {
       "ticker": "BIDU",
       "capB": 38,
-      "beatsMembers": 16,
+      "beatsMembers": 15,
       "name": "Baidu, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "JD",
-      "capB": 37.2,
-      "beatsMembers": 15,
+      "capB": 36.5,
+      "beatsMembers": 14,
       "name": "JD.com, Inc.",
       "sector": "Consumer Cyclical",
       "since": "2026-06-17"
@@ -66,84 +66,84 @@
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 19.8,
+      "capB": 19.7,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
-      "ticker": "ZS",
-      "capB": 20.2,
-      "name": "Zscaler, Inc.",
-      "sector": "Technology",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "CTSH",
-      "capB": 20.7,
+      "capB": 19.8,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
+      "ticker": "ZS",
+      "capB": 20.1,
+      "name": "Zscaler, Inc.",
+      "sector": "Technology",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "INSM",
-      "capB": 20.8,
+      "capB": 21.4,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 22.8,
+      "capB": 22.1,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "KHC",
-      "capB": 27.1,
+      "capB": 26.1,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
     },
     {
       "ticker": "DXCM",
-      "capB": 28,
+      "capB": 26.7,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "CPRT",
-      "capB": 28,
+      "capB": 27.3,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "GEHC",
-      "capB": 28,
+      "capB": 27.6,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "WDAY",
-      "capB": 28.9,
+      "capB": 27.9,
       "name": "Workday, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "ROP",
-      "capB": 33.3,
+      "capB": 32.8,
       "name": "Roper Technologies, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "AXON",
-      "capB": 34.1,
+      "capB": 33,
       "name": "Axon Enterprise, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
