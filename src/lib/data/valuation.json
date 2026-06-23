@@ -15,6 +15,21 @@
       "stage1GrowthPct": 12,
       "discountRatePct": 9,
       "terminalGrowthPct": 4
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "谷歌 Alphabet",
+      "asOf": "2026-06-22",
+      "price": 349.68,
+      "marketCapB": 4240,
+      "forwardEps": 14.22,
+      "hist5yForwardPe": 23,
+      "consensusGrowthPct": 12,
+      "fcfBaseB": 64,
+      "netCashB": 49,
+      "stage1GrowthPct": 14,
+      "discountRatePct": 9,
+      "terminalGrowthPct": 4
     }
   ]
 }
