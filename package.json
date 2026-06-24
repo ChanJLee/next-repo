@@ -26,7 +26,8 @@
     "data:earnings": "tsx scripts/build-earnings-dates.ts",
     "postinstall": "prisma generate",
     "factor:snapshot": "tsx scripts/build-factor-snapshot.ts",
-    "nasdaq:watch": "tsx scripts/build-nasdaq100-watch.ts"
+    "nasdaq:watch": "tsx scripts/build-nasdaq100-watch.ts",
+    "valuation:refresh": "tsx scripts/build-valuation.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

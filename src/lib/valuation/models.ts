@@ -88,7 +88,9 @@ export function intrinsicValueB(
 export function impliedGrowthPct(input: ValuationInput): number {
   const target = input.marketCapB;
   let lo = -5;
-  let hi = 40;
+  // 上限放宽到 80%：像 TSLA 这种市值远超正常化 FCF 的极端票，隐含增速会逼近 40%+，
+  // 上限太低会把搜索夹死在天花板（反推回不到市值）。80% 足够覆盖且仍是「明显高于共识=偏贵」。
+  let hi = 80;
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
     const v = intrinsicValueB(input.fcfBaseB, mid, input.discountRatePct, input.terminalGrowthPct, input.netCashB);
