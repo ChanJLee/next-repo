@@ -11,6 +11,8 @@ import { TriggerCheckButton } from "./_components/trigger-check-button";
 import nasdaqWatch from "@/lib/data/nasdaq100-watch.json";
 import { AddToWatchButton } from "./_components/add-to-watch-button";
 import { ValuationCard } from "./_components/valuation-card";
+import { MagsCard } from "./_components/mags-card";
+import { getMagsSnapshot } from "@/lib/mags/snapshot";
 
 export const dynamic = "force-dynamic";
 // 手动/强制检查走从本页发起的 Server Action（runCheck 会拉行情+逐策略评估），
@@ -150,6 +152,9 @@ export default async function HomePage() {
     /* 行情失败时不显示 */
   }
 
+  // MAGS「抄作业卡」初始快照（内部已 try/catch 降级，不会抛出阻塞页面）
+  const magsSnapshot = await getMagsSnapshot();
+
   const marketOpen = isMarketOpen();
   const levelCount = { long: 0, neutral: 0, short: 0 } as Record<string, number>;
   for (const g of levelGroups) levelCount[g.currentLevel] = g._count;
@@ -243,6 +248,9 @@ export default async function HomePage() {
 
       {/* 估值快照（多模型） */}
       <ValuationCard />
+
+      {/* 七姐妹抄作业卡（MAGS 等权） */}
+      <MagsCard initial={magsSnapshot} />
 
       {/* 今日简报 */}
       <Card>
