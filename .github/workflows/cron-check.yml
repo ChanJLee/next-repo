@@ -21,7 +21,8 @@ concurrency:
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 单次 curl 上限 120s，最多 3 次重试 + 退避（10s/20s），最坏约 6.5min，留 10min 兜底。
+    timeout-minutes: 10
     steps:
       - name: Trigger /api/cron/check on Vercel
         env:
@@ -41,11 +42,29 @@ jobs:
           # “应用层 401（{\"error\":\"unauthorized\"}，CRON_SECRET 不匹配）” 与
           # “Vercel Deployment Protection 拦截（返回 SSO HTML）”。
           BODY=$(mktemp)
-          CODE=$(curl -sS --max-time 240 -X POST \
-            -H "x-cron-secret: ${CRON_SECRET}" \
-            -H "Content-Type: application/json" \
-            -o "$BODY" -w "%{http_code}" \
-            "${URL}")
+          # 偶发 5xx（尤其 Vercel 504 网关超时：外部行情源某次变慢，单次函数 >60s 被掐断）
+          # 与连接失败（curl 000）自动重试；4xx（如 401 鉴权）不重试，立即失败。
+          MAX_ATTEMPTS=3
+          CODE=""
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            CODE=$(curl -sS --max-time 120 -X POST \
+              -H "x-cron-secret: ${CRON_SECRET}" \
+              -H "Content-Type: application/json" \
+              -o "$BODY" -w "%{http_code}" \
+              "${URL}") || CODE="000"
+            echo "attempt ${attempt}/${MAX_ATTEMPTS}: HTTP ${CODE}"
+            if [ "$CODE" -ge 200 ] && [ "$CODE" -lt 300 ]; then
+              break
+            fi
+            # 仅对 5xx 与连接失败（000）重试；其余（4xx）直接跳出去报错。
+            if [ "$CODE" -lt 500 ] && [ "$CODE" != "000" ]; then
+              break
+            fi
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              echo "临时性失败（HTTP ${CODE}），${attempt}0s 后重试…"
+              sleep "${attempt}0"
+            fi
+          done
           echo "HTTP ${CODE}"
           echo "----- response body -----"
           cat "$BODY"; echo ""
@@ -55,6 +74,8 @@ jobs:
               echo "::error::401 来自 Vercel Deployment Protection（平台 SSO），请求未到达函数。请在 Vercel 项目 Settings → Deployment Protection 关闭对生产环境的保护，或配置 Protection Bypass for Automation 并在请求里带 bypass token。"
             elif [ "$CODE" = "401" ]; then
               echo "::error::401 来自应用（CRON_SECRET 不匹配）。请确认 GitHub Secret 的 CRON_SECRET 与 Vercel 环境变量 CRON_SECRET 完全一致，且改动后已重新部署。"
+            elif [ "$CODE" -ge 500 ] || [ "$CODE" = "000" ]; then
+              echo "::error::重试 ${MAX_ATTEMPTS} 次后仍失败，HTTP ${CODE}（Vercel 网关超时或函数错误，详见上方响应体）"
             else
               echo "::error::请求失败，HTTP ${CODE}（详见上方响应体）"
             fi
