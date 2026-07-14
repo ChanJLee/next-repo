@@ -1,14 +1,14 @@
 {
-  "asOf": "2026-07-13",
-  "generatedAt": "2026-07-13T23:02:27.386Z",
+  "asOf": "2026-07-14",
+  "generatedAt": "2026-07-14T23:03:09.564Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 36.4,
+  "cutoffCapB": 35.4,
   "memberCount": 101,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 84.1,
+      "capB": 82.2,
       "beatsMembers": 46,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
@@ -16,15 +16,15 @@
     },
     {
       "ticker": "ALAB",
-      "capB": 62.1,
-      "beatsMembers": 32,
+      "capB": 62,
+      "beatsMembers": 31,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "ARGX",
-      "capB": 54.8,
+      "capB": 53.7,
       "beatsMembers": 30,
       "name": "argenx SE",
       "sector": "Healthcare",
@@ -32,105 +32,113 @@
     },
     {
       "ticker": "JD",
-      "capB": 39,
-      "beatsMembers": 13,
+      "capB": 38.9,
+      "beatsMembers": 14,
       "name": "JD.com, Inc.",
       "sector": "Consumer Cyclical",
       "since": "2026-07-08"
     },
     {
       "ticker": "BIDU",
-      "capB": 38.6,
-      "beatsMembers": 13,
+      "capB": 37.3,
+      "beatsMembers": 12,
       "name": "Baidu, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
+    },
+    {
+      "ticker": "ON",
+      "capB": 36.5,
+      "beatsMembers": 12,
+      "name": "ON Semiconductor Corporation",
+      "sector": "Technology",
+      "since": "2026-07-14"
     }
   ],
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 20.6,
+      "capB": 20,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "CTSH",
-      "capB": 20.9,
+      "capB": 20.4,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
-      "ticker": "ZS",
-      "capB": 22.9,
-      "name": "Zscaler, Inc.",
-      "sector": "Technology",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "INSM",
-      "capB": 23.7,
+      "capB": 23.9,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
+      "ticker": "ZS",
+      "capB": 24.6,
+      "name": "Zscaler, Inc.",
+      "sector": "Technology",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "VRSK",
-      "capB": 25.4,
+      "capB": 25,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "CPRT",
-      "capB": 26.4,
+      "capB": 25.5,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
-      "ticker": "DXCM",
-      "capB": 29.5,
-      "name": "DexCom, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "GEHC",
-      "capB": 29.7,
+      "capB": 28,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
+      "ticker": "DXCM",
+      "capB": 28.6,
+      "name": "DexCom, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "KHC",
-      "capB": 29.9,
+      "capB": 29.7,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
     },
     {
-      "ticker": "MSTR",
-      "capB": 33,
-      "name": "Strategy Inc",
-      "sector": "Technology",
-      "since": "2026-06-24"
-    },
-    {
       "ticker": "WDAY",
-      "capB": 35.8,
+      "capB": 34.5,
       "name": "Workday, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "ROP",
-      "capB": 36.4,
+      "capB": 35,
       "name": "Roper Technologies, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
+    },
+    {
+      "ticker": "MSTR",
+      "capB": 35.4,
+      "name": "Strategy Inc",
+      "sector": "Technology",
+      "since": "2026-06-24"
     }
   ]
 }
