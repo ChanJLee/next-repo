@@ -1,75 +1,75 @@
 {
-  "asOf": "2026-07-30",
-  "generatedAt": "2026-07-30T23:13:20.282Z",
+  "asOf": "2026-07-31",
+  "generatedAt": "2026-07-31T23:10:07.141Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 38.5,
+  "cutoffCapB": 38.8,
   "memberCount": 95,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 84.4,
+      "capB": 85.3,
       "beatsMembers": 44,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
-      "ticker": "ARGX",
-      "capB": 54.3,
-      "beatsMembers": 29,
-      "name": "argenx SE",
-      "sector": "Healthcare",
+      "ticker": "ALAB",
+      "capB": 53.3,
+      "beatsMembers": 27,
+      "name": "Astera Labs, Inc.",
+      "sector": "Technology",
       "since": "2026-06-17"
     },
     {
-      "ticker": "ALAB",
-      "capB": 51.4,
-      "beatsMembers": 26,
-      "name": "Astera Labs, Inc.",
-      "sector": "Technology",
+      "ticker": "ARGX",
+      "capB": 53.1,
+      "beatsMembers": 27,
+      "name": "argenx SE",
+      "sector": "Healthcare",
       "since": "2026-06-17"
     }
   ],
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 19.1,
+      "capB": 19.5,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "INSM",
-      "capB": 22,
+      "capB": 21.4,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "ZS",
-      "capB": 24,
+      "capB": 24.5,
       "name": "Zscaler, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "CTSH",
-      "capB": 24.3,
+      "capB": 24.9,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 26.1,
+      "capB": 25.4,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "CPRT",
-      "capB": 27.4,
+      "capB": 27,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
@@ -82,36 +82,36 @@
       "since": "2026-07-28"
     },
     {
-      "ticker": "DXCM",
-      "capB": 28.8,
-      "name": "DexCom, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "KHC",
-      "capB": 31.3,
+      "capB": 30.7,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
     },
     {
       "ticker": "GEHC",
-      "capB": 31.6,
+      "capB": 30.7,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
+      "ticker": "DXCM",
+      "capB": 32.2,
+      "name": "DexCom, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "MSTR",
-      "capB": 35.7,
+      "capB": 34.1,
       "name": "Strategy Inc",
       "sector": "Technology",
       "since": "2026-07-23"
     },
     {
       "ticker": "ROP",
-      "capB": 38.5,
+      "capB": 38.8,
       "name": "Roper Technologies, Inc.",
       "sector": "Technology",
       "since": "2026-07-30"
