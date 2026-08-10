@@ -1,349 +1,356 @@
 {
-  "asOf": "2026-08-03",
-  "builtAt": "2026-08-03T10:11:52.740Z",
+  "asOf": "2026-08-10",
+  "builtAt": "2026-08-10T08:12:45.347Z",
   "factor": "value+momentum (z(B/M)+z(12-1 mom))",
-  "universeSize": 48,
+  "universeSize": 49,
   "stats": {
     "bmMean": 0.2097,
-    "bmStd": 0.2159,
-    "momMean": 0.2838,
-    "momStd": 0.8268
+    "bmStd": 0.2121,
+    "momMean": 0.3027,
+    "momStd": 0.7485
   },
   "items": [
     {
       "ticker": "LOW",
-      "bm": -0.0796,
-      "mom": -0.0242,
-      "composite": -1.712,
+      "bm": -0.074,
+      "mom": -0.1061,
+      "composite": -1.8837,
       "percentile": 0
     },
     {
       "ticker": "MCD",
-      "bm": -0.0067,
-      "mom": -0.1126,
-      "composite": -1.4814,
+      "bm": -0.0053,
+      "mom": -0.1013,
+      "composite": -1.5531,
       "percentile": 2
     },
     {
       "ticker": "ORCL",
-      "bm": 0.1136,
-      "mom": -0.4314,
-      "composite": -1.3097,
+      "bm": 0.1004,
+      "mom": -0.4376,
+      "composite": -1.5043,
       "percentile": 4
     },
     {
-      "ticker": "ADBE",
-      "bm": 0.1157,
-      "mom": -0.4204,
-      "composite": -1.2868,
+      "ticker": "HD",
+      "bm": 0.0391,
+      "mom": -0.1243,
+      "composite": -1.3745,
       "percentile": 6
     },
     {
-      "ticker": "HD",
-      "bm": 0.0419,
-      "mom": -0.0571,
-      "composite": -1.1892,
-      "percentile": 9
+      "ticker": "ADBE",
+      "bm": 0.1093,
+      "mom": -0.3558,
+      "composite": -1.3531,
+      "percentile": 8
     },
     {
       "ticker": "BA",
-      "bm": 0.0357,
-      "mom": -0.0321,
-      "composite": -1.1877,
-      "percentile": 11
+      "bm": 0.0329,
+      "mom": -0.0086,
+      "composite": -1.2492,
+      "percentile": 10
     },
     {
       "ticker": "MMM",
-      "bm": 0.0325,
-      "mom": 0.091,
-      "composite": -1.0538,
+      "bm": 0.0313,
+      "mom": 0.03,
+      "composite": -1.2054,
       "percentile": 13
     },
     {
       "ticker": "MSFT",
-      "bm": 0.1282,
-      "mom": -0.2513,
-      "composite": -1.0244,
+      "bm": 0.1192,
+      "mom": -0.2678,
+      "composite": -1.1889,
       "percentile": 15
     },
     {
-      "ticker": "NVDA",
-      "bm": 0.0402,
-      "mom": 0.1021,
-      "composite": -1.0043,
+      "ticker": "COST",
+      "bm": 0.0797,
+      "mom": -0.0574,
+      "composite": -1.0938,
       "percentile": 17
     },
     {
-      "ticker": "QCOM",
-      "bm": 0.0317,
-      "mom": 0.1437,
-      "composite": -0.9937,
+      "ticker": "ABBV",
+      "bm": -0.0137,
+      "mom": 0.2731,
+      "composite": -1.0925,
       "percentile": 19
     },
     {
-      "ticker": "ABBV",
-      "bm": -0.015,
-      "mom": 0.3262,
-      "composite": -0.9892,
+      "ticker": "NVDA",
+      "bm": 0.0361,
+      "mom": 0.1302,
+      "composite": -1.049,
       "percentile": 21
     },
     {
       "ticker": "AVGO",
-      "bm": 0.0135,
-      "mom": 0.2205,
-      "composite": -0.9852,
+      "bm": 0.0123,
+      "mom": 0.3296,
+      "composite": -0.8948,
       "percentile": 23
     },
     {
-      "ticker": "COST",
-      "bm": 0.0794,
-      "mom": -0.0031,
-      "composite": -0.9503,
-      "percentile": 26
+      "ticker": "PEP",
+      "bm": 0.1165,
+      "mom": -0.0209,
+      "composite": -0.8718,
+      "percentile": 25
     },
     {
-      "ticker": "PEP",
-      "bm": 0.116,
-      "mom": -0.0119,
-      "composite": -0.7914,
-      "percentile": 28
+      "ticker": "QCOM",
+      "bm": 0.0279,
+      "mom": 0.3104,
+      "composite": -0.8469,
+      "percentile": 27
     },
     {
       "ticker": "CRM",
-      "bm": 0.2272,
-      "mom": -0.3836,
-      "composite": -0.7262,
-      "percentile": 30
-    },
-    {
-      "ticker": "AAPL",
-      "bm": 0.0238,
-      "mom": 0.4082,
-      "composite": -0.7101,
-      "percentile": 32
+      "bm": 0.2169,
+      "mom": -0.3478,
+      "composite": -0.8351,
+      "percentile": 29
     },
     {
       "ticker": "WMT",
-      "bm": 0.1066,
-      "mom": 0.1151,
-      "composite": -0.6814,
-      "percentile": 34
-    },
-    {
-      "ticker": "KO",
-      "bm": 0.0892,
-      "mom": 0.1824,
-      "composite": -0.6803,
-      "percentile": 36
+      "bm": 0.106,
+      "mom": 0.0856,
+      "composite": -0.7789,
+      "percentile": 31
     },
     {
       "ticker": "GE",
-      "bm": 0.0472,
-      "mom": 0.3706,
-      "composite": -0.6473,
-      "percentile": 38
+      "bm": 0.0459,
+      "mom": 0.3186,
+      "composite": -0.7507,
+      "percentile": 33
+    },
+    {
+      "ticker": "KO",
+      "bm": 0.0898,
+      "mom": 0.1887,
+      "composite": -0.7174,
+      "percentile": 35
     },
     {
       "ticker": "TSLA",
-      "bm": 0.0707,
-      "mom": 0.3331,
-      "composite": -0.5841,
+      "bm": 0.0669,
+      "mom": 0.2708,
+      "composite": -0.7156,
+      "percentile": 38
+    },
+    {
+      "ticker": "AAPL",
+      "bm": 0.0235,
+      "mom": 0.4829,
+      "composite": -0.637,
       "percentile": 40
     },
     {
-      "ticker": "LLY",
-      "bm": 0.0288,
-      "mom": 0.5679,
-      "composite": -0.4938,
-      "percentile": 43
-    },
-    {
       "ticker": "AXP",
-      "bm": 0.151,
-      "mom": 0.147,
-      "composite": -0.4373,
-      "percentile": 45
-    },
-    {
-      "ticker": "IBM",
-      "bm": 0.1635,
-      "mom": 0.0999,
-      "composite": -0.4362,
-      "percentile": 47
-    },
-    {
-      "ticker": "AMZN",
-      "bm": 0.1883,
-      "mom": 0.05,
-      "composite": -0.3817,
-      "percentile": 49
+      "bm": 0.1489,
+      "mom": 0.1732,
+      "composite": -0.4596,
+      "percentile": 42
     },
     {
       "ticker": "ABT",
-      "bm": 0.2828,
-      "mom": -0.2829,
-      "composite": -0.3469,
-      "percentile": 51
+      "bm": 0.2772,
+      "mom": -0.279,
+      "composite": -0.4586,
+      "percentile": 44
     },
     {
-      "ticker": "TXN",
-      "bm": 0.0715,
-      "mom": 0.5746,
-      "composite": -0.2881,
-      "percentile": 53
+      "ticker": "IBM",
+      "bm": 0.1541,
+      "mom": 0.1705,
+      "composite": -0.4385,
+      "percentile": 46
+    },
+    {
+      "ticker": "LLY",
+      "bm": 0.0304,
+      "mom": 0.6305,
+      "composite": -0.4075,
+      "percentile": 48
+    },
+    {
+      "ticker": "AMZN",
+      "bm": 0.1863,
+      "mom": 0.1112,
+      "composite": -0.3659,
+      "percentile": 50
     },
     {
       "ticker": "HON",
-      "bm": 0.2406,
-      "mom": 0.0098,
-      "composite": -0.188,
-      "percentile": 55
+      "bm": 0.2376,
+      "mom": 0.031,
+      "composite": -0.2315,
+      "percentile": 52
     },
     {
-      "ticker": "UNH",
-      "bm": 0.0877,
-      "mom": 0.6033,
-      "composite": -0.1782,
-      "percentile": 57
-    },
-    {
-      "ticker": "TMO",
-      "bm": 0.2481,
-      "mom": 0.0755,
-      "composite": -0.074,
-      "percentile": 60
-    },
-    {
-      "ticker": "JNJ",
-      "bm": 0.1375,
-      "mom": 0.5185,
-      "composite": -0.0502,
-      "percentile": 62
+      "ticker": "TXN",
+      "bm": 0.0689,
+      "mom": 0.6596,
+      "composite": -0.1869,
+      "percentile": 54
     },
     {
       "ticker": "UPS",
-      "bm": 0.2119,
-      "mom": 0.2565,
-      "composite": -0.0229,
-      "percentile": 64
+      "bm": 0.202,
+      "mom": 0.2839,
+      "composite": -0.0614,
+      "percentile": 56
     },
     {
-      "ticker": "MRK",
-      "bm": 0.1427,
-      "mom": 0.5336,
-      "composite": -0.0082,
-      "percentile": 66
+      "ticker": "JNJ",
+      "bm": 0.136,
+      "mom": 0.5188,
+      "composite": -0.0585,
+      "percentile": 58
     },
     {
-      "ticker": "CSCO",
-      "bm": 0.1069,
-      "mom": 0.7137,
-      "composite": 0.0439,
-      "percentile": 68
+      "ticker": "TMO",
+      "bm": 0.2399,
+      "mom": 0.1688,
+      "composite": -0.0366,
+      "percentile": 60
     },
     {
       "ticker": "NKE",
-      "bm": 0.4167,
-      "mom": -0.4384,
-      "composite": 0.0851,
-      "percentile": 70
+      "bm": 0.4168,
+      "mom": -0.4332,
+      "composite": -0.0068,
+      "percentile": 63
+    },
+    {
+      "ticker": "MRK",
+      "bm": 0.1322,
+      "mom": 0.5744,
+      "composite": -0.0024,
+      "percentile": 65
     },
     {
       "ticker": "BLK",
-      "bm": 0.3356,
-      "mom": -0.1205,
-      "composite": 0.0941,
-      "percentile": 72
+      "bm": 0.3272,
+      "mom": -0.09,
+      "composite": 0.0297,
+      "percentile": 67
+    },
+    {
+      "ticker": "CSCO",
+      "bm": 0.1021,
+      "mom": 0.7094,
+      "composite": 0.0361,
+      "percentile": 69
+    },
+    {
+      "ticker": "UNH",
+      "bm": 0.0893,
+      "mom": 0.7564,
+      "composite": 0.0386,
+      "percentile": 71
     },
     {
       "ticker": "GOOGL",
-      "bm": 0.1471,
-      "mom": 0.8379,
-      "composite": 0.3803,
-      "percentile": 74
+      "bm": 0.1478,
+      "mom": 0.8302,
+      "composite": 0.4131,
+      "percentile": 73
     },
     {
       "ticker": "JPM",
-      "bm": 0.3862,
-      "mom": 0.1149,
-      "composite": 0.6133,
+      "bm": 0.3942,
+      "mom": 0.1514,
+      "composite": 0.6678,
+      "percentile": 75
+    },
+    {
+      "ticker": "XOM",
+      "bm": 0.4122,
+      "mom": 0.2906,
+      "composite": 0.9386,
       "percentile": 77
     },
     {
-      "ticker": "COP",
-      "bm": 0.4397,
-      "mom": 0.0678,
-      "composite": 0.8041,
+      "ticker": "MS",
+      "bm": 0.3424,
+      "mom": 0.572,
+      "composite": 0.9855,
       "percentile": 79
     },
     {
-      "ticker": "MS",
-      "bm": 0.3443,
-      "mom": 0.4617,
-      "composite": 0.8389,
+      "ticker": "COP",
+      "bm": 0.4625,
+      "mom": 0.1601,
+      "composite": 1.0017,
       "percentile": 81
     },
     {
-      "ticker": "CVX",
-      "bm": 0.4687,
-      "mom": 0.079,
-      "composite": 0.9517,
+      "ticker": "GS",
+      "bm": 0.4055,
+      "mom": 0.457,
+      "composite": 1.1294,
       "percentile": 83
     },
     {
-      "ticker": "GS",
-      "bm": 0.4087,
-      "mom": 0.3953,
-      "composite": 1.0565,
+      "ticker": "CVX",
+      "bm": 0.5151,
+      "mom": 0.1392,
+      "composite": 1.2219,
       "percentile": 85
     },
     {
       "ticker": "DIS",
-      "bm": 0.6508,
-      "mom": -0.1993,
-      "composite": 1.4586,
-      "percentile": 87
-    },
-    {
-      "ticker": "AMD",
-      "bm": 0.083,
-      "mom": 2.0131,
-      "composite": 1.5051,
-      "percentile": 89
+      "bm": 0.6074,
+      "mom": -0.165,
+      "composite": 1.2505,
+      "percentile": 88
     },
     {
       "ticker": "PFE",
-      "bm": 0.6321,
-      "mom": 0.0029,
-      "composite": 1.6166,
-      "percentile": 91
+      "bm": 0.5585,
+      "mom": 0.0134,
+      "composite": 1.2583,
+      "percentile": 90
     },
     {
       "ticker": "WFC",
-      "bm": 0.6743,
-      "mom": 0.0509,
-      "composite": 1.8702,
+      "bm": 0.6829,
+      "mom": 0.1198,
+      "composite": 1.9871,
+      "percentile": 92
+    },
+    {
+      "ticker": "AMD",
+      "bm": 0.0852,
+      "mom": 2.3516,
+      "composite": 2.1504,
       "percentile": 94
     },
     {
       "ticker": "BAC",
-      "bm": 0.695,
-      "mom": 0.2168,
-      "composite": 2.1668,
+      "bm": 0.6816,
+      "mom": 0.3045,
+      "composite": 2.2276,
       "percentile": 96
     },
     {
       "ticker": "C",
-      "bm": 0.9162,
-      "mom": 0.4626,
-      "composite": 3.4884,
+      "bm": 0.8989,
+      "mom": 0.5133,
+      "composite": 3.5311,
       "percentile": 98
     },
     {
       "ticker": "INTC",
-      "bm": 0.1924,
-      "mom": 5.2448,
-      "composite": 5.9204,
+      "bm": 0.1707,
+      "mom": 4.514,
+      "composite": 5.4424,
       "percentile": 100
     }
   ]
