@@ -1,22 +1,22 @@
 {
-  "asOf": "2026-08-12",
-  "generatedAt": "2026-08-12T22:50:45.727Z",
+  "asOf": "2026-08-13",
+  "generatedAt": "2026-08-13T22:52:32.540Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 39.1,
-  "memberCount": 98,
+  "cutoffCapB": 39.3,
+  "memberCount": 101,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 79.5,
-      "beatsMembers": 41,
+      "capB": 78.5,
+      "beatsMembers": 39,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "ALAB",
-      "capB": 55.3,
+      "capB": 56,
       "beatsMembers": 28,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
@@ -24,102 +24,118 @@
     },
     {
       "ticker": "ARGX",
-      "capB": 54.5,
-      "beatsMembers": 28,
+      "capB": 53.6,
+      "beatsMembers": 27,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "TEAM",
-      "capB": 39.4,
+      "capB": 42.1,
       "beatsMembers": 12,
       "name": "Atlassian Corporation",
       "sector": "Technology",
       "since": "2026-08-12"
+    },
+    {
+      "ticker": "JD",
+      "capB": 39.6,
+      "beatsMembers": 12,
+      "name": "JD.com, Inc.",
+      "sector": "Consumer Cyclical",
+      "since": "2026-08-13"
+    },
+    {
+      "ticker": "EXPE",
+      "capB": 39.4,
+      "beatsMembers": 12,
+      "name": "Expedia Group, Inc.",
+      "sector": "Consumer Cyclical",
+      "since": "2026-08-13"
     }
   ],
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 20.2,
+      "capB": 21.1,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 23.5,
+      "capB": 24.4,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
+      "ticker": "INSM",
+      "capB": 27.6,
+      "name": "Insmed Incorporated",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "CTSH",
-      "capB": 26.2,
+      "capB": 28,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "CPRT",
-      "capB": 26.8,
+      "capB": 28.3,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
-      "ticker": "ZS",
-      "capB": 28.7,
-      "name": "Zscaler, Inc.",
-      "sector": "Technology",
-      "since": "2026-06-17"
-    },
-    {
-      "ticker": "INSM",
-      "capB": 28.9,
-      "name": "Insmed Incorporated",
-      "sector": "Healthcare",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "KHC",
-      "capB": 29.1,
+      "capB": 30.1,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
     },
     {
       "ticker": "ALNY",
-      "capB": 30,
+      "capB": 30.4,
       "name": "Alnylam Pharmaceuticals, Inc.",
       "sector": "Healthcare",
       "since": "2026-07-28"
     },
     {
+      "ticker": "ZS",
+      "capB": 30.4,
+      "name": "Zscaler, Inc.",
+      "sector": "Technology",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "GEHC",
-      "capB": 32.6,
+      "capB": 33.6,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "DXCM",
-      "capB": 34.3,
+      "capB": 34.5,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "MSTR",
-      "capB": 37.3,
+      "capB": 38.2,
       "name": "Strategy Inc",
       "sector": "Technology",
       "since": "2026-07-23"
     },
     {
       "ticker": "ROP",
-      "capB": 39.1,
+      "capB": 39.3,
       "name": "Roper Technologies, Inc.",
       "sector": "Technology",
       "since": "2026-08-11"
