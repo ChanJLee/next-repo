@@ -1,22 +1,22 @@
 {
-  "asOf": "2026-08-13",
-  "generatedAt": "2026-08-13T22:52:32.540Z",
+  "asOf": "2026-08-14",
+  "generatedAt": "2026-08-14T22:31:14.163Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 39.3,
+  "cutoffCapB": 39.5,
   "memberCount": 101,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 78.5,
-      "beatsMembers": 39,
+      "capB": 80.1,
+      "beatsMembers": 40,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "ALAB",
-      "capB": 56,
+      "capB": 55.8,
       "beatsMembers": 28,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
@@ -24,31 +24,23 @@
     },
     {
       "ticker": "ARGX",
-      "capB": 53.6,
-      "beatsMembers": 27,
+      "capB": 53.3,
+      "beatsMembers": 28,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "TEAM",
-      "capB": 42.1,
+      "capB": 41.2,
       "beatsMembers": 12,
       "name": "Atlassian Corporation",
       "sector": "Technology",
       "since": "2026-08-12"
     },
     {
-      "ticker": "JD",
-      "capB": 39.6,
-      "beatsMembers": 12,
-      "name": "JD.com, Inc.",
-      "sector": "Consumer Cyclical",
-      "since": "2026-08-13"
-    },
-    {
       "ticker": "EXPE",
-      "capB": 39.4,
+      "capB": 39.9,
       "beatsMembers": 12,
       "name": "Expedia Group, Inc.",
       "sector": "Consumer Cyclical",
@@ -58,84 +50,84 @@
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 21.1,
+      "capB": 20.8,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 24.4,
+      "capB": 23.8,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "INSM",
-      "capB": 27.6,
+      "capB": 27,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "CTSH",
-      "capB": 28,
+      "capB": 27.8,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
-      "ticker": "CPRT",
-      "capB": 28.3,
-      "name": "Copart, Inc.",
-      "sector": "Industrials",
-      "since": "2026-06-17"
-    },
-    {
-      "ticker": "KHC",
-      "capB": 30.1,
-      "name": "The Kraft Heinz Company",
-      "sector": "Consumer Defensive",
-      "since": "2026-06-17"
-    },
-    {
-      "ticker": "ALNY",
-      "capB": 30.4,
-      "name": "Alnylam Pharmaceuticals, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-07-28"
-    },
-    {
       "ticker": "ZS",
-      "capB": 30.4,
+      "capB": 29.7,
       "name": "Zscaler, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
+      "ticker": "KHC",
+      "capB": 30.3,
+      "name": "The Kraft Heinz Company",
+      "sector": "Consumer Defensive",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "CPRT",
+      "capB": 30.5,
+      "name": "Copart, Inc.",
+      "sector": "Industrials",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "ALNY",
+      "capB": 30.6,
+      "name": "Alnylam Pharmaceuticals, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-07-28"
+    },
+    {
       "ticker": "GEHC",
-      "capB": 33.6,
+      "capB": 33.5,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "DXCM",
-      "capB": 34.5,
+      "capB": 33.9,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "MSTR",
-      "capB": 38.2,
+      "capB": 36.6,
       "name": "Strategy Inc",
       "sector": "Technology",
       "since": "2026-07-23"
     },
     {
       "ticker": "ROP",
-      "capB": 39.3,
+      "capB": 39.5,
       "name": "Roper Technologies, Inc.",
       "sector": "Technology",
       "since": "2026-08-11"
