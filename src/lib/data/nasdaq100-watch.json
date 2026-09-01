@@ -1,14 +1,14 @@
 {
   "asOf": "2026-09-01",
-  "generatedAt": "2026-09-01T01:11:04.534Z",
+  "generatedAt": "2026-09-01T23:57:16.217Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 41.1,
+  "cutoffCapB": 38.9,
   "memberCount": 100,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 78,
+      "capB": 76.9,
       "beatsMembers": 38,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
@@ -16,7 +16,7 @@
     },
     {
       "ticker": "ARGX",
-      "capB": 64.5,
+      "capB": 64,
       "beatsMembers": 32,
       "name": "argenx SE",
       "sector": "Healthcare",
@@ -24,15 +24,15 @@
     },
     {
       "ticker": "MRNA",
-      "capB": 56,
-      "beatsMembers": 27,
+      "capB": 61.6,
+      "beatsMembers": 31,
       "name": "Moderna, Inc.",
       "sector": "Healthcare",
       "since": "2026-08-19"
     },
     {
       "ticker": "ALAB",
-      "capB": 51.5,
+      "capB": 48.6,
       "beatsMembers": 25,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
@@ -40,8 +40,8 @@
     },
     {
       "ticker": "TEAM",
-      "capB": 49.2,
-      "beatsMembers": 25,
+      "capB": 47.3,
+      "beatsMembers": 22,
       "name": "Atlassian Corporation",
       "sector": "Technology",
       "since": "2026-08-12"
@@ -50,86 +50,86 @@
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 20.5,
+      "capB": 19.7,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 25.4,
+      "capB": 25.3,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "INSM",
-      "capB": 26.6,
+      "capB": 26.5,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
-      "ticker": "KHC",
-      "capB": 30.4,
-      "name": "The Kraft Heinz Company",
-      "sector": "Consumer Defensive",
-      "since": "2026-06-17"
-    },
-    {
-      "ticker": "ZS",
-      "capB": 30.5,
-      "name": "Zscaler, Inc.",
-      "sector": "Technology",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "CTSH",
-      "capB": 30.5,
+      "capB": 28.6,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
+      "ticker": "ZS",
+      "capB": 28.8,
+      "name": "Zscaler, Inc.",
+      "sector": "Technology",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "CPRT",
-      "capB": 31.8,
+      "capB": 30.1,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
-      "ticker": "ALNY",
-      "capB": 32.2,
-      "name": "Alnylam Pharmaceuticals, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-07-28"
+      "ticker": "KHC",
+      "capB": 30.7,
+      "name": "The Kraft Heinz Company",
+      "sector": "Consumer Defensive",
+      "since": "2026-06-17"
     },
     {
       "ticker": "GEHC",
-      "capB": 32.4,
+      "capB": 31.8,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
+      "ticker": "ALNY",
+      "capB": 32.9,
+      "name": "Alnylam Pharmaceuticals, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-07-28"
+    },
+    {
       "ticker": "DXCM",
-      "capB": 34.4,
+      "capB": 34,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "MCHP",
-      "capB": 39.9,
+      "capB": 38.8,
       "name": "Microchip Technology Incorporated",
       "sector": "Technology",
       "since": "2026-08-20"
     },
     {
-      "ticker": "TTWO",
-      "capB": 41.1,
-      "name": "Take-Two Interactive Software, Inc.",
-      "sector": "Communication Services",
+      "ticker": "ODFL",
+      "capB": 38.9,
+      "name": "Old Dominion Freight Line, Inc.",
+      "sector": "Industrials",
       "since": "2026-09-01"
     }
   ]
