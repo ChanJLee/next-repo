@@ -1,63 +1,63 @@
 {
-  "asOf": "2026-09-02",
-  "generatedAt": "2026-09-02T23:59:53.731Z",
+  "asOf": "2026-09-03",
+  "generatedAt": "2026-09-03T23:55:34.496Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 39.5,
+  "cutoffCapB": 39.7,
   "memberCount": 100,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 76.5,
-      "beatsMembers": 39,
+      "capB": 74.9,
+      "beatsMembers": 38,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "ARGX",
-      "capB": 65.6,
-      "beatsMembers": 34,
+      "capB": 65.5,
+      "beatsMembers": 32,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "MRNA",
-      "capB": 60.2,
-      "beatsMembers": 31,
+      "capB": 59.4,
+      "beatsMembers": 30,
       "name": "Moderna, Inc.",
       "sector": "Healthcare",
       "since": "2026-08-19"
     },
     {
+      "ticker": "TEAM",
+      "capB": 49.3,
+      "beatsMembers": 24,
+      "name": "Atlassian Corporation",
+      "sector": "Technology",
+      "since": "2026-08-12"
+    },
+    {
       "ticker": "ALAB",
-      "capB": 47.6,
+      "capB": 49.1,
       "beatsMembers": 24,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
-    },
-    {
-      "ticker": "TEAM",
-      "capB": 47.2,
-      "beatsMembers": 23,
-      "name": "Atlassian Corporation",
-      "sector": "Technology",
-      "since": "2026-08-12"
     }
   ],
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 21.4,
+      "capB": 20.4,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 24.5,
+      "capB": 24.8,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
@@ -71,63 +71,63 @@
     },
     {
       "ticker": "ZS",
-      "capB": 27.9,
+      "capB": 28.8,
       "name": "Zscaler, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "CTSH",
-      "capB": 28.6,
+      "capB": 29.1,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
-      "ticker": "CPRT",
-      "capB": 29.8,
-      "name": "Copart, Inc.",
-      "sector": "Industrials",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "KHC",
-      "capB": 31.1,
+      "capB": 30.1,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
     },
     {
+      "ticker": "CPRT",
+      "capB": 31.1,
+      "name": "Copart, Inc.",
+      "sector": "Industrials",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "GEHC",
-      "capB": 31.9,
+      "capB": 31.5,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "DXCM",
-      "capB": 33.8,
+      "capB": 33.9,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "ALNY",
-      "capB": 35.8,
+      "capB": 35.4,
       "name": "Alnylam Pharmaceuticals, Inc.",
       "sector": "Healthcare",
       "since": "2026-07-28"
     },
     {
       "ticker": "ODFL",
-      "capB": 39,
+      "capB": 38.6,
       "name": "Old Dominion Freight Line, Inc.",
       "sector": "Industrials",
       "since": "2026-09-01"
     },
     {
       "ticker": "MCHP",
-      "capB": 39.5,
+      "capB": 39.7,
       "name": "Microchip Technology Incorporated",
       "sector": "Technology",
       "since": "2026-08-20"
