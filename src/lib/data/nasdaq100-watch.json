@@ -1,6 +1,6 @@
 {
-  "asOf": "2026-09-04",
-  "generatedAt": "2026-09-04T23:54:29.975Z",
+  "asOf": "2026-09-08",
+  "generatedAt": "2026-09-08T00:08:58.294Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
   "cutoffCapB": 40.1,
   "memberCount": 100,
@@ -63,17 +63,17 @@
       "since": "2026-06-17"
     },
     {
-      "ticker": "ZS",
-      "capB": 27.5,
-      "name": "Zscaler, Inc.",
-      "sector": "Technology",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "INSM",
       "capB": 27.6,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
+      "since": "2026-06-17"
+    },
+    {
+      "ticker": "ZS",
+      "capB": 27.7,
+      "name": "Zscaler, Inc.",
+      "sector": "Technology",
       "since": "2026-06-17"
     },
     {
