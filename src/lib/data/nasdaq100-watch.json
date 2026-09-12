@@ -1,6 +1,6 @@
 {
-  "asOf": "2026-09-10",
-  "generatedAt": "2026-09-10T23:57:13.486Z",
+  "asOf": "2026-09-12",
+  "generatedAt": "2026-09-12T00:04:42.475Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
   "cutoffCapB": 38.4,
   "memberCount": 100,
@@ -24,15 +24,15 @@
     },
     {
       "ticker": "MRNA",
-      "capB": 54.5,
-      "beatsMembers": 27,
+      "capB": 57.5,
+      "beatsMembers": 29,
       "name": "Moderna, Inc.",
       "sector": "Healthcare",
       "since": "2026-08-19"
     },
     {
       "ticker": "ALAB",
-      "capB": 49.4,
+      "capB": 50.5,
       "beatsMembers": 26,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
@@ -50,7 +50,7 @@
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 18.9,
+      "capB": 19.6,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
@@ -63,64 +63,64 @@
       "since": "2026-06-17"
     },
     {
-      "ticker": "CTSH",
-      "capB": 26.3,
-      "name": "Cognizant Technology Solutions Corporation",
-      "sector": "Technology",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "ZS",
-      "capB": 26.7,
+      "capB": 26.8,
       "name": "Zscaler, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
-      "ticker": "INSM",
-      "capB": 27.8,
-      "name": "Insmed Incorporated",
-      "sector": "Healthcare",
+      "ticker": "CTSH",
+      "capB": 27,
+      "name": "Cognizant Technology Solutions Corporation",
+      "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "CPRT",
-      "capB": 28.5,
+      "capB": 27.7,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
-      "ticker": "KHC",
-      "capB": 28.9,
-      "name": "The Kraft Heinz Company",
-      "sector": "Consumer Defensive",
+      "ticker": "INSM",
+      "capB": 28.3,
+      "name": "Insmed Incorporated",
+      "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "GEHC",
-      "capB": 29,
+      "capB": 28.9,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
+      "ticker": "KHC",
+      "capB": 29.2,
+      "name": "The Kraft Heinz Company",
+      "sector": "Consumer Defensive",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "DXCM",
-      "capB": 31.9,
+      "capB": 31.3,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "ALNY",
-      "capB": 33.1,
+      "capB": 33.3,
       "name": "Alnylam Pharmaceuticals, Inc.",
       "sector": "Healthcare",
       "since": "2026-07-28"
     },
     {
       "ticker": "ODFL",
-      "capB": 37.5,
+      "capB": 37.4,
       "name": "Old Dominion Freight Line, Inc.",
       "sector": "Industrials",
       "since": "2026-09-01"
