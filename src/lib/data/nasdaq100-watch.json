@@ -1,38 +1,38 @@
 {
-  "asOf": "2026-09-18",
-  "generatedAt": "2026-09-18T00:02:35.708Z",
+  "asOf": "2026-09-19",
+  "generatedAt": "2026-09-19T00:07:10.051Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 36.8,
+  "cutoffCapB": 36.4,
   "memberCount": 100,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "NTES",
-      "capB": 74.7,
+      "capB": 74.4,
       "beatsMembers": 39,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
-      "ticker": "MRNA",
-      "capB": 63.1,
-      "beatsMembers": 33,
-      "name": "Moderna, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-08-19"
-    },
-    {
       "ticker": "ARGX",
-      "capB": 61.9,
+      "capB": 61.6,
       "beatsMembers": 33,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
+      "ticker": "MRNA",
+      "capB": 61.5,
+      "beatsMembers": 33,
+      "name": "Moderna, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-08-19"
+    },
+    {
       "ticker": "ALAB",
-      "capB": 50.9,
+      "capB": 52.6,
       "beatsMembers": 26,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
@@ -40,70 +40,69 @@
     },
     {
       "ticker": "TEAM",
-      "capB": 48.7,
+      "capB": 48.6,
       "beatsMembers": 26,
       "name": "Atlassian Corporation",
       "sector": "Technology",
       "since": "2026-08-12"
-    },
-    {
-      "ticker": "ILMN",
-      "capB": 37,
-      "beatsMembers": 12,
-      "name": "Illumina, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-09-18"
     }
   ],
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 17.3,
+      "capB": 16.7,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 23,
+      "capB": 22.8,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "INSM",
-      "capB": 27.1,
+      "capB": 26.2,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
-      "ticker": "CPRT",
-      "capB": 27.5,
-      "name": "Copart, Inc.",
-      "sector": "Industrials",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "CTSH",
-      "capB": 27.9,
+      "capB": 27,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
+      "ticker": "CPRT",
+      "capB": 27.1,
+      "name": "Copart, Inc.",
+      "sector": "Industrials",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "GEHC",
-      "capB": 29.1,
+      "capB": 29,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "KHC",
-      "capB": 29.3,
+      "capB": 29,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
+    },
+    {
+      "ticker": "ALNY",
+      "capB": 32.1,
+      "name": "Alnylam Pharmaceuticals, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-07-28"
     },
     {
       "ticker": "ZS",
@@ -113,29 +112,22 @@
       "since": "2026-06-17"
     },
     {
-      "ticker": "ALNY",
-      "capB": 32.9,
-      "name": "Alnylam Pharmaceuticals, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-07-28"
-    },
-    {
       "ticker": "DXCM",
-      "capB": 33.2,
+      "capB": 33.7,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "ODFL",
-      "capB": 36.4,
+      "capB": 36,
       "name": "Old Dominion Freight Line, Inc.",
       "sector": "Industrials",
       "since": "2026-09-01"
     },
     {
       "ticker": "AXON",
-      "capB": 36.8,
+      "capB": 36.4,
       "name": "Axon Enterprise, Inc.",
       "sector": "Industrials",
       "since": "2026-09-18"
