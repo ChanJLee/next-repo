@@ -1,38 +1,38 @@
 {
-  "asOf": "2026-10-16",
-  "generatedAt": "2026-10-16T00:13:31.707Z",
+  "asOf": "2026-10-17",
+  "generatedAt": "2026-10-17T00:16:14.240Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 35.9,
-  "memberCount": 100,
+  "cutoffCapB": 35.6,
+  "memberCount": 99,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "MRNA",
-      "capB": 94.4,
-      "beatsMembers": 51,
+      "capB": 87,
+      "beatsMembers": 44,
       "name": "Moderna, Inc.",
       "sector": "Healthcare",
       "since": "2026-08-19"
     },
     {
       "ticker": "NTES",
-      "capB": 81.4,
-      "beatsMembers": 41,
+      "capB": 80.7,
+      "beatsMembers": 39,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "TEAM",
-      "capB": 55,
-      "beatsMembers": 28,
+      "capB": 52.6,
+      "beatsMembers": 26,
       "name": "Atlassian Corporation",
       "sector": "Technology",
       "since": "2026-08-12"
     },
     {
       "ticker": "ARGX",
-      "capB": 53.2,
+      "capB": 51.5,
       "beatsMembers": 26,
       "name": "argenx SE",
       "sector": "Healthcare",
@@ -40,35 +40,27 @@
     },
     {
       "ticker": "ALAB",
-      "capB": 52.4,
-      "beatsMembers": 26,
+      "capB": 49.6,
+      "beatsMembers": 25,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "ILMN",
-      "capB": 40.5,
-      "beatsMembers": 17,
+      "capB": 39.6,
+      "beatsMembers": 15,
       "name": "Illumina, Inc.",
       "sector": "Healthcare",
       "since": "2026-09-23"
     },
     {
       "ticker": "JD",
-      "capB": 37,
+      "capB": 36.5,
       "beatsMembers": 12,
       "name": "JD.com, Inc.",
       "sector": "Consumer Cyclical",
       "since": "2026-10-16"
-    },
-    {
-      "ticker": "OKTA",
-      "capB": 36.5,
-      "beatsMembers": 12,
-      "name": "Okta, Inc.",
-      "sector": "Technology",
-      "since": "2026-09-29"
     }
   ],
   "dropRisk": [
@@ -81,80 +73,80 @@
     },
     {
       "ticker": "INSM",
-      "capB": 21.7,
+      "capB": 21,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 24.4,
+      "capB": 24.8,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "CPRT",
-      "capB": 25.7,
+      "capB": 25.8,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "KHC",
-      "capB": 27.6,
+      "capB": 28.1,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
     },
     {
       "ticker": "CTSH",
-      "capB": 29.6,
+      "capB": 29.7,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
       "ticker": "ALNY",
-      "capB": 31.3,
+      "capB": 31,
       "name": "Alnylam Pharmaceuticals, Inc.",
       "sector": "Healthcare",
       "since": "2026-07-28"
     },
     {
       "ticker": "GEHC",
-      "capB": 31.8,
+      "capB": 31.4,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
-      "ticker": "DXCM",
-      "capB": 33.1,
-      "name": "DexCom, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "AXON",
-      "capB": 33.9,
+      "capB": 31.7,
       "name": "Axon Enterprise, Inc.",
       "sector": "Industrials",
       "since": "2026-09-24"
     },
     {
-      "ticker": "FER",
-      "capB": 35.2,
-      "name": "Ferrovial N.V.",
-      "sector": "Industrials",
-      "since": "2026-10-10"
+      "ticker": "DXCM",
+      "capB": 32.5,
+      "name": "DexCom, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
     },
     {
       "ticker": "ZS",
-      "capB": 35.9,
+      "capB": 33.8,
       "name": "Zscaler, Inc.",
       "sector": "Technology",
       "since": "2026-10-15"
+    },
+    {
+      "ticker": "FER",
+      "capB": 35.6,
+      "name": "Ferrovial N.V.",
+      "sector": "Industrials",
+      "since": "2026-10-10"
     }
   ]
 }
