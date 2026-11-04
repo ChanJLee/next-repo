@@ -1,46 +1,46 @@
 {
-  "asOf": "2026-11-03",
-  "generatedAt": "2026-11-03T03:25:04.877Z",
+  "asOf": "2026-11-04",
+  "generatedAt": "2026-11-04T02:05:50.019Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 36.5,
+  "cutoffCapB": 36.7,
   "memberCount": 99,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "MRNA",
-      "capB": 88.2,
-      "beatsMembers": 44,
+      "capB": 91.2,
+      "beatsMembers": 47,
       "name": "Moderna, Inc.",
       "sector": "Healthcare",
       "since": "2026-08-19"
     },
     {
       "ticker": "NTES",
-      "capB": 74,
-      "beatsMembers": 37,
+      "capB": 74.4,
+      "beatsMembers": 38,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "ARGX",
-      "capB": 55,
-      "beatsMembers": 28,
+      "capB": 56.7,
+      "beatsMembers": 29,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "TEAM",
-      "capB": 47.4,
-      "beatsMembers": 16,
+      "capB": 48.4,
+      "beatsMembers": 22,
       "name": "Atlassian Corporation",
       "sector": "Technology",
       "since": "2026-08-12"
     },
     {
       "ticker": "ALAB",
-      "capB": 39.8,
+      "capB": 40.5,
       "beatsMembers": 13,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
@@ -49,7 +49,7 @@
     {
       "ticker": "BIIB",
       "capB": 36.8,
-      "beatsMembers": 13,
+      "beatsMembers": 12,
       "name": "Biogen Inc.",
       "sector": "Healthcare",
       "since": "2026-10-30"
@@ -58,84 +58,84 @@
   "dropRisk": [
     {
       "ticker": "CHTR",
-      "capB": 15,
+      "capB": 14.8,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "ALNY",
-      "capB": 21.2,
+      "capB": 21.4,
       "name": "Alnylam Pharmaceuticals, Inc.",
       "sector": "Healthcare",
       "since": "2026-07-28"
     },
     {
       "ticker": "INSM",
-      "capB": 24,
+      "capB": 22.9,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "VRSK",
-      "capB": 26.2,
+      "capB": 25.8,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "CTSH",
-      "capB": 29.1,
+      "capB": 28.5,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
-      "ticker": "KHC",
-      "capB": 29.6,
-      "name": "The Kraft Heinz Company",
-      "sector": "Consumer Defensive",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "CPRT",
-      "capB": 29.6,
+      "capB": 28.8,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
+      "ticker": "KHC",
+      "capB": 29.1,
+      "name": "The Kraft Heinz Company",
+      "sector": "Consumer Defensive",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "DXCM",
-      "capB": 31.6,
+      "capB": 30.9,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "AXON",
-      "capB": 34.6,
+      "capB": 33.8,
       "name": "Axon Enterprise, Inc.",
       "sector": "Industrials",
       "since": "2026-09-24"
     },
     {
       "ticker": "TTWO",
-      "capB": 35.9,
+      "capB": 36.5,
       "name": "Take-Two Interactive Software, Inc.",
       "sector": "Communication Services",
       "since": "2026-10-28"
     },
     {
       "ticker": "GEHC",
-      "capB": 36,
+      "capB": 36.5,
       "name": "GE HealthCare Technologies Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "ZS",
-      "capB": 36.5,
+      "capB": 36.7,
       "name": "Zscaler, Inc.",
       "sector": "Technology",
       "since": "2026-11-03"
