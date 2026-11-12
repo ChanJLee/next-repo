@@ -1,14 +1,14 @@
 {
-  "asOf": "2026-11-11",
-  "generatedAt": "2026-11-11T01:48:48.784Z",
+  "asOf": "2026-11-12",
+  "generatedAt": "2026-11-12T02:48:21.799Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 34.6,
+  "cutoffCapB": 35.1,
   "memberCount": 99,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "MRNA",
-      "capB": 101.5,
+      "capB": 100.6,
       "beatsMembers": 53,
       "name": "Moderna, Inc.",
       "sector": "Healthcare",
@@ -16,7 +16,7 @@
     },
     {
       "ticker": "NTES",
-      "capB": 82,
+      "capB": 78.2,
       "beatsMembers": 41,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
@@ -24,40 +24,40 @@
     },
     {
       "ticker": "ARGX",
-      "capB": 61.1,
+      "capB": 61.5,
       "beatsMembers": 31,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
-      "ticker": "JD",
-      "capB": 38.2,
-      "beatsMembers": 13,
-      "name": "JD.com, Inc.",
-      "sector": "Consumer Cyclical",
-      "since": "2026-11-06"
-    },
-    {
       "ticker": "ALAB",
-      "capB": 37.8,
-      "beatsMembers": 12,
+      "capB": 40.4,
+      "beatsMembers": 13,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
       "since": "2026-11-10"
     },
     {
       "ticker": "TEAM",
-      "capB": 37.6,
-      "beatsMembers": 12,
+      "capB": 38.6,
+      "beatsMembers": 13,
       "name": "Atlassian Corporation",
       "sector": "Technology",
       "since": "2026-08-12"
     },
     {
+      "ticker": "JD",
+      "capB": 37.6,
+      "beatsMembers": 13,
+      "name": "JD.com, Inc.",
+      "sector": "Consumer Cyclical",
+      "since": "2026-11-06"
+    },
+    {
       "ticker": "BIIB",
-      "capB": 37.4,
-      "beatsMembers": 12,
+      "capB": 37.5,
+      "beatsMembers": 13,
       "name": "Biogen Inc.",
       "sector": "Healthcare",
       "since": "2026-11-06"
@@ -66,35 +66,35 @@
   "dropRisk": [
     {
       "ticker": "ALNY",
-      "capB": 20.3,
+      "capB": 21.4,
       "name": "Alnylam Pharmaceuticals, Inc.",
       "sector": "Healthcare",
       "since": "2026-07-28"
     },
     {
       "ticker": "CHTR",
-      "capB": 24,
+      "capB": 24.4,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
       "ticker": "AXON",
-      "capB": 24.6,
+      "capB": 25.7,
       "name": "Axon Enterprise, Inc.",
       "sector": "Industrials",
       "since": "2026-09-24"
     },
     {
       "ticker": "VRSK",
-      "capB": 26.2,
+      "capB": 26.4,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "INSM",
-      "capB": 26.2,
+      "capB": 26.5,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-06-17"
@@ -108,42 +108,42 @@
     },
     {
       "ticker": "CTSH",
-      "capB": 29.1,
+      "capB": 28.8,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
-      "ticker": "DXCM",
-      "capB": 29.8,
-      "name": "DexCom, Inc.",
-      "sector": "Healthcare",
-      "since": "2026-06-17"
-    },
-    {
       "ticker": "CPRT",
-      "capB": 29.9,
+      "capB": 29.8,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
+      "ticker": "DXCM",
+      "capB": 30,
+      "name": "DexCom, Inc.",
+      "sector": "Healthcare",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "ZS",
-      "capB": 31.8,
+      "capB": 31.6,
       "name": "Zscaler, Inc.",
       "sector": "Technology",
       "since": "2026-11-03"
     },
     {
       "ticker": "MCHP",
-      "capB": 32.8,
+      "capB": 33.8,
       "name": "Microchip Technology Incorporated",
       "sector": "Technology",
       "since": "2026-11-06"
     },
     {
       "ticker": "ODFL",
-      "capB": 34.6,
+      "capB": 35.1,
       "name": "Old Dominion Freight Line, Inc.",
       "sector": "Industrials",
       "since": "2026-11-05"
