@@ -1,22 +1,22 @@
 {
-  "asOf": "2026-11-18",
-  "generatedAt": "2026-11-18T03:34:19.242Z",
+  "asOf": "2026-11-19",
+  "generatedAt": "2026-11-19T03:07:23.462Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 35.4,
+  "cutoffCapB": 36.1,
   "memberCount": 99,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "MRNA",
-      "capB": 83.7,
-      "beatsMembers": 42,
+      "capB": 79.6,
+      "beatsMembers": 41,
       "name": "Moderna, Inc.",
       "sector": "Healthcare",
       "since": "2026-08-19"
     },
     {
       "ticker": "NTES",
-      "capB": 76.6,
+      "capB": 75.8,
       "beatsMembers": 41,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
@@ -24,78 +24,70 @@
     },
     {
       "ticker": "ARGX",
-      "capB": 59.6,
+      "capB": 59.2,
       "beatsMembers": 31,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
-      "ticker": "BIIB",
-      "capB": 37.1,
-      "beatsMembers": 13,
-      "name": "Biogen Inc.",
-      "sector": "Healthcare",
-      "since": "2026-11-06"
-    },
-    {
       "ticker": "ALAB",
-      "capB": 37,
-      "beatsMembers": 12,
+      "capB": 37.9,
+      "beatsMembers": 13,
       "name": "Astera Labs, Inc.",
       "sector": "Technology",
       "since": "2026-11-18"
     },
     {
-      "ticker": "TEAM",
-      "capB": 35.5,
+      "ticker": "BIIB",
+      "capB": 37.2,
       "beatsMembers": 12,
-      "name": "Atlassian Corporation",
-      "sector": "Technology",
-      "since": "2026-08-12"
+      "name": "Biogen Inc.",
+      "sector": "Healthcare",
+      "since": "2026-11-06"
     }
   ],
   "dropRisk": [
     {
       "ticker": "ALNY",
-      "capB": 21,
+      "capB": 20,
       "name": "Alnylam Pharmaceuticals, Inc.",
       "sector": "Healthcare",
       "since": "2026-07-28"
     },
     {
       "ticker": "AXON",
-      "capB": 24.3,
+      "capB": 24.5,
       "name": "Axon Enterprise, Inc.",
       "sector": "Industrials",
       "since": "2026-09-24"
     },
     {
       "ticker": "CHTR",
-      "capB": 24.8,
+      "capB": 24.9,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
+      "ticker": "CTSH",
+      "capB": 25.9,
+      "name": "Cognizant Technology Solutions Corporation",
+      "sector": "Technology",
+      "since": "2026-06-17"
+    },
+    {
       "ticker": "VRSK",
-      "capB": 26.3,
+      "capB": 26,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "INSM",
-      "capB": 26.7,
+      "capB": 26.3,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
-      "since": "2026-06-17"
-    },
-    {
-      "ticker": "CTSH",
-      "capB": 26.8,
-      "name": "Cognizant Technology Solutions Corporation",
-      "sector": "Technology",
       "since": "2026-06-17"
     },
     {
@@ -107,35 +99,35 @@
     },
     {
       "ticker": "KHC",
-      "capB": 29.7,
+      "capB": 30.1,
       "name": "The Kraft Heinz Company",
       "sector": "Consumer Defensive",
       "since": "2026-06-17"
     },
     {
-      "ticker": "ZS",
-      "capB": 30.2,
-      "name": "Zscaler, Inc.",
-      "sector": "Technology",
-      "since": "2026-11-03"
-    },
-    {
       "ticker": "DXCM",
-      "capB": 30.6,
+      "capB": 30.8,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
-      "ticker": "MCHP",
+      "ticker": "ZS",
       "capB": 32.3,
+      "name": "Zscaler, Inc.",
+      "sector": "Technology",
+      "since": "2026-11-03"
+    },
+    {
+      "ticker": "MCHP",
+      "capB": 32.5,
       "name": "Microchip Technology Incorporated",
       "sector": "Technology",
       "since": "2026-11-06"
     },
     {
       "ticker": "ODFL",
-      "capB": 35.4,
+      "capB": 36.1,
       "name": "Old Dominion Freight Line, Inc.",
       "sector": "Industrials",
       "since": "2026-11-05"
