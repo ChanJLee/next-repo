@@ -4,7 +4,7 @@
     {
       "ticker": "MSFT",
       "name": "微软 Microsoft",
-      "asOf": "2026-11-26",
+      "asOf": "2026-11-27",
       "manualFields": [
         "consensusGrowthPct",
         "fcfBaseB"
@@ -23,14 +23,14 @@
     {
       "ticker": "GOOGL",
       "name": "谷歌 Alphabet",
-      "asOf": "2026-11-26",
+      "asOf": "2026-11-27",
       "manualFields": [
         "consensusGrowthPct",
         "fcfBaseB"
       ],
       "price": 273.1,
       "marketCapB": 3357,
-      "forwardEps": 15.29,
+      "forwardEps": 15.3,
       "hist5yForwardPe": 23,
       "consensusGrowthPct": 12,
       "fcfBaseB": 64,
@@ -42,7 +42,7 @@
     {
       "ticker": "AAPL",
       "name": "苹果 Apple",
-      "asOf": "2026-11-26",
+      "asOf": "2026-11-27",
       "price": 355.58,
       "marketCapB": 5167,
       "forwardEps": 10.57,
@@ -57,7 +57,7 @@
     {
       "ticker": "AMZN",
       "name": "亚马逊 Amazon",
-      "asOf": "2026-11-26",
+      "asOf": "2026-11-27",
       "price": 244.43,
       "marketCapB": 2643,
       "forwardEps": 10.93,
@@ -72,7 +72,7 @@
     {
       "ticker": "NVDA",
       "name": "英伟达 Nvidia",
-      "asOf": "2026-11-26",
+      "asOf": "2026-11-27",
       "price": 149.3,
       "marketCapB": 3605,
       "forwardEps": 16.61,
@@ -87,10 +87,10 @@
     {
       "ticker": "META",
       "name": "Meta",
-      "asOf": "2026-11-26",
+      "asOf": "2026-11-27",
       "price": 609.89,
       "marketCapB": 1559,
-      "forwardEps": 35.68,
+      "forwardEps": 35.56,
       "hist5yForwardPe": 24,
       "consensusGrowthPct": 21.1,
       "fcfBaseB": 17,
@@ -102,7 +102,7 @@
     {
       "ticker": "TSLA",
       "name": "特斯拉 Tesla",
-      "asOf": "2026-11-26",
+      "asOf": "2026-11-27",
       "price": 380.14,
       "marketCapB": 1503,
       "forwardEps": 2.16,
