@@ -1,22 +1,22 @@
 {
-  "asOf": "2026-11-27",
-  "generatedAt": "2026-11-27T04:01:42.356Z",
+  "asOf": "2026-11-28",
+  "generatedAt": "2026-11-28T03:48:58.523Z",
   "note": "信息参考，非买卖信号。纳入≈无超额收益（指数效应已被抢跑）；本卡片用于成分异动前瞻。市值排序为主因，剔除亦可能因权重/流通/资格触发。",
-  "cutoffCapB": 37.4,
+  "cutoffCapB": 37.5,
   "memberCount": 99,
   "nextReconstitution": "每年 12 月（按 11 月底市值定选）",
   "addCandidates": [
     {
       "ticker": "MRNA",
-      "capB": 89.4,
-      "beatsMembers": 48,
+      "capB": 92.5,
+      "beatsMembers": 49,
       "name": "Moderna, Inc.",
       "sector": "Healthcare",
       "since": "2026-08-19"
     },
     {
       "ticker": "NTES",
-      "capB": 66.8,
+      "capB": 68.4,
       "beatsMembers": 35,
       "name": "NetEase, Inc.",
       "sector": "Communication Services",
@@ -24,16 +24,16 @@
     },
     {
       "ticker": "ARGX",
-      "capB": 61.7,
-      "beatsMembers": 35,
+      "capB": 62.5,
+      "beatsMembers": 34,
       "name": "argenx SE",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
       "ticker": "BIIB",
-      "capB": 38.6,
-      "beatsMembers": 14,
+      "capB": 39.1,
+      "beatsMembers": 13,
       "name": "Biogen Inc.",
       "sector": "Healthcare",
       "since": "2026-11-06"
@@ -42,52 +42,45 @@
   "dropRisk": [
     {
       "ticker": "ALNY",
-      "capB": 22.1,
+      "capB": 21.8,
       "name": "Alnylam Pharmaceuticals, Inc.",
       "sector": "Healthcare",
       "since": "2026-07-28"
     },
     {
       "ticker": "VRSK",
-      "capB": 26.3,
+      "capB": 26.1,
       "name": "Verisk Analytics, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
     },
     {
       "ticker": "CHTR",
-      "capB": 26.4,
+      "capB": 27.6,
       "name": "Charter Communications, Inc.",
       "sector": "Communication Services",
       "since": "2026-06-17"
     },
     {
-      "ticker": "AXON",
-      "capB": 27.9,
-      "name": "Axon Enterprise, Inc.",
-      "sector": "Industrials",
-      "since": "2026-09-24"
-    },
-    {
       "ticker": "CTSH",
-      "capB": 28.3,
+      "capB": 28.4,
       "name": "Cognizant Technology Solutions Corporation",
       "sector": "Technology",
       "since": "2026-06-17"
     },
     {
+      "ticker": "AXON",
+      "capB": 29.6,
+      "name": "Axon Enterprise, Inc.",
+      "sector": "Industrials",
+      "since": "2026-09-24"
+    },
+    {
       "ticker": "CPRT",
-      "capB": 30.7,
+      "capB": 30.8,
       "name": "Copart, Inc.",
       "sector": "Industrials",
       "since": "2026-06-17"
-    },
-    {
-      "ticker": "MCHP",
-      "capB": 31.4,
-      "name": "Microchip Technology Incorporated",
-      "sector": "Technology",
-      "since": "2026-11-06"
     },
     {
       "ticker": "KHC",
@@ -98,28 +91,35 @@
     },
     {
       "ticker": "DXCM",
-      "capB": 31.6,
+      "capB": 31.8,
       "name": "DexCom, Inc.",
       "sector": "Healthcare",
       "since": "2026-06-17"
     },
     {
+      "ticker": "MCHP",
+      "capB": 32.9,
+      "name": "Microchip Technology Incorporated",
+      "sector": "Technology",
+      "since": "2026-11-06"
+    },
+    {
       "ticker": "MSTR",
-      "capB": 34,
+      "capB": 34.7,
       "name": "Strategy Inc",
       "sector": "Technology",
       "since": "2026-11-21"
     },
     {
       "ticker": "ODFL",
-      "capB": 36,
+      "capB": 36.3,
       "name": "Old Dominion Freight Line, Inc.",
       "sector": "Industrials",
       "since": "2026-11-24"
     },
     {
       "ticker": "INSM",
-      "capB": 37.4,
+      "capB": 37.5,
       "name": "Insmed Incorporated",
       "sector": "Healthcare",
       "since": "2026-11-26"
